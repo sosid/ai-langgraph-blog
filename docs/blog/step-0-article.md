@@ -27,10 +27,11 @@ By the end, you should be able to:
 
 ### Starting point and prerequisites
 
-The accepted starting point for this chapter is the Step 0 blueprint merged to
-`development` at `6bd4aefe59e82954f5b38ce099be315072e3ed60`. That snapshot contains
-planning documents and this chapter's approved scope, but no rental
-implementation. The empty `development` root that preceded it was
+The starting point for this chapter is the Step 0 blueprint merged to
+`development` at `6bd4aefe59e82954f5b38ce099be315072e3ed60`. That snapshot
+contains planning documents and the proposed scope; authorization to complete
+the chapter followed. It contains no rental implementation. The empty
+`development` root that preceded it was
 `f5fecbac8a063b9b59bacb22e87ead17a144dcc7`.
 
 You need only Git and a Markdown reader to follow the chapter. There is no JDK,
@@ -102,16 +103,18 @@ Follow Alex from search to the fleet handoff. At every transition, ask what
 must already be true, who can establish it, and what should happen if its
 outcome is unknown.
 
-| Transition | Owner and authority | Evidence to retain | Safe unresolved outcome |
-| --- | --- | --- | --- |
-| Search and quote | Booking applies deterministic eligibility and pricing rules; fleet owns capacity | Request and applicable rule/quote versions | Do not offer an unsupported price or availability claim |
-| Hold and reservation | Fleet owns the atomic capacity hold; booking owns reservation status | Stable operation identity, hold outcome, quote reference | Query the outcome before retrying an uncertain hold |
-| Payment authorization | Payment owns the operation and provider outcome | Authorized operation identity and outcome reference | Reconcile an unknown result; do not charge again on a guess |
-| Pickup | Rental checks authoritative prerequisites; fleet owns vehicle readiness | Accepted agreement, verified prerequisites, ready assignment | Do not mark the rental active until the prerequisites are established |
-| Return and inspection | Rental records the return; authorized staff assess condition | Return time and versioned condition evidence | Keep the evidence and route uncertainty to review |
-| Settlement and readiness | Rental owns approved billing facts; payment executes authorized operations; fleet owns readiness | Approval tied to evidence, payment outcome, inspection/maintenance status | Reconcile unknown payment outcomes; keep an unsafe vehicle unavailable |
+| Synthetic case | Prerequisites | Owner and authority | Versioned evidence references (illustrative slots) | Outcome or abstention | Future acceptance check |
+| --- | --- | --- | --- | --- | --- |
+| `S0-H-01` search/quote | Request interval and eligibility inputs are available | Booking applies deterministic eligibility/pricing; fleet owns capacity | `request:S0-H-01`; `eligibility-policy:<version>`; `pricing-policy:<version>`; `quote:<version>` | Return only an eligible quote based on the checked policy and capacity | Same request and policy versions produce the same quote; stale versions are rejected |
+| `S0-H-02` hold/reservation | Quote is valid; requested interval is still available | Fleet owns the atomic hold; booking owns reservation status | `quote:S0-H-02:<version>`; `hold-operation:<stable-id>`; `hold-outcome:<version>` | Reservation refers to the hold; uncertain hold outcome is queried before retry | Competing requests cannot both commit the same capacity; a lost success response does not duplicate the hold |
+| `S0-H-03` payment authorization | Reservation is valid and payment action is authorized | Payment owns the operation and provider outcome | `reservation:S0-H-03:<version>`; `payment-operation:<stable-id>`; `provider-outcome:<version>` | Record the known outcome; reconcile an unknown result without blindly resubmitting | Duplicate command and lost response resolve to one reconciled operation outcome |
+| `S0-H-04` pickup | Identity/licence result, accepted terms, required deposit outcome, and ready assignment are authoritative | Rental checks prerequisites; fleet owns readiness; payment owns deposit outcome | `renter-check:S0-H-04:<version>`; `agreement:<version>`; `deposit-operation:<stable-id>`; `fleet-assignment:<version>` | Activate only after every prerequisite is satisfied; otherwise stop | Missing or negative prerequisite prevents activation; duplicate pickup does not repeat an effect |
+| `S0-H-05` return/inspection | Vehicle is returned and inspection evidence is recorded | Rental records return; authorized staff assess condition | `return-record:S0-H-05:<version>`; `condition-inspection:<version>`; `prior-condition:<version>` | Preserve observations; abstain or refer conflicting/missing evidence for review | Incomplete or conflicting evidence cannot establish liability automatically |
+| `S0-H-06` settlement/readiness | Billing facts have authorized approval; payment outcome is known; fleet inspection is complete | Rental owns billing facts; payment executes authorized operation; fleet owns readiness | `billing-facts:S0-H-06:<version>`; `approval:<evidence-version>`; `payment-operation:<stable-id>`; `readiness-inspection:<version>` | Reconcile an unknown payment; keep vehicle unavailable until fleet readiness passes | Changed evidence invalidates affected approval; unknown payment is not blindly retried; unresolved safety concern blocks availability |
 
-The intended sequence is:
+The case IDs and evidence references below are synthetic placeholders for review;
+they do not identify real records or establish that a record schema exists. The
+intended sequence is:
 
 ```text
 request -> quote -> capacity hold -> reservation -> authorized payment
@@ -130,12 +133,12 @@ phone is not permission to contact Alex or disclose his information. Seeing the
 scratch does not establish when it happened, who caused it, or whether Alex is
 liable.
 
-| Observation | Authorized next step | Prohibited inference | Future acceptance check |
-| --- | --- | --- | --- |
-| Cellphone found | Record a lost-property case; verify ownership and contact permission through the applicable process | A tool result grants permission to disclose information or send a message | Wrong-owner lookup and missing/revoked consent do not expose customer data or trigger outreach |
-| Scratch observed | Preserve return and inspection evidence; request authorized assessment if evidence is incomplete or conflicting | The observation alone proves timing, liability, or a charge amount | Conflicting or missing condition evidence abstains or routes to authorized review |
-| Safety concern unresolved | Keep the vehicle unavailable pending the fleet owner's inspection/readiness decision | A model summary or completed rental releases the vehicle | Readiness cannot become available until authoritative checks pass |
-| Evidence changes after review | Bind the decision to the evidence version and re-evaluate changed facts | An earlier approval automatically applies to new evidence | A changed evidence version invalidates the affected approval |
+| Synthetic case | Prerequisites and versioned evidence references (illustrative slots) | Owner and authorized actor | Outcome or abstention | Prohibited inference | Future acceptance check |
+| --- | --- | --- | --- | --- | --- |
+| `S0-A-01` cellphone found | Synthetic return record and item-location record: `return:S0-A-01:<version>`, `found-item:<version>` | Lost-property owner; staff act only under verified ownership/contact process | Record a separate case; withhold disclosure/outreach if ownership or permission is unresolved | A tool result grants permission to disclose information or send a message | Wrong-owner lookup and missing/revoked consent do not expose customer data or trigger outreach |
+| `S0-A-02` scratch observed | Return and condition records: `return:S0-A-02:<version>`, `condition-inspection:<version>`, `prior-condition:<version>` | Rental preserves evidence; authorized reviewer assesses it | Produce a typed proposal for review or abstain/refer when evidence conflicts | The observation alone proves timing, liability, or a charge amount | Conflicting or missing condition evidence cannot trigger an automatic liability decision or charge |
+| `S0-A-03` safety concern unresolved | Inspection record and fleet readiness policy: `readiness-inspection:S0-A-03:<version>`, `readiness-policy:<version>` | Fleet owner or authorized inspector | Keep vehicle unavailable until authoritative readiness checks pass | A model summary or completed rental releases the vehicle | Readiness cannot become available until required authoritative checks pass |
+| `S0-A-04` evidence changes after review | Existing approval and new evidence versions: `approval:S0-A-04:<prior-version>`, `condition-inspection:<new-version>` | Staff review owner re-evaluates under the authorized process | Revoke or reconsider the affected proposal/approval before a consequential action | An earlier approval automatically applies to new evidence | A changed evidence version prevents reuse of an affected approval without re-evaluation |
 
 A bounded model may propose a summary or identify missing evidence. A reviewer
 may request more evidence, and a later proposal may be clearer. Neither model
