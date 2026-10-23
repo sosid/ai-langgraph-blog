@@ -1,0 +1,27 @@
+# Miles of Smiles — Chapter Index
+
+*Building Auditable AI Systems with LangGraph4j.* This index is cumulative: it
+lists only chapters that have been delivered in the repository. Planned steps from
+the [roadmap](../../plan.md#roadmap) appear here as they are authorized, written,
+and verified — not before.
+
+Read [`story.md`](../../story.md) for the customer journey and
+[`plan.md`](../../plan.md) for the full series contract.
+
+## Delivered chapters
+
+| Step | Title | Type | Article | Status |
+| --- | --- | --- | --- | --- |
+| 0 | The Rental and Evidence Contract | Documentation only | [`step-0-article.md`](step-0-article.md) | Candidate for review (documentation-only) |
+
+## How to read a chapter
+
+Each chapter article names its exact starting snapshot, prerequisites, and — from
+Step 1 onward — a pinned version matrix and reproducible commands. Promises opened
+by each chapter are tracked in [`../promise-ledger.md`](../promise-ledger.md), and
+each chapter's claim-to-evidence record lives under
+[`../verification/`](../verification/).
+
+Step 0 is documentation only: it defines ownership, authority, evidence, and
+failure outcomes for the rental lifecycle. It contains no code, no build, and no
+runtime claims.
