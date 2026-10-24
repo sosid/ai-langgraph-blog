@@ -1,0 +1,52 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: development-ca
+  namespace: mos-step-1
+spec:
+  ca:
+    secretName: development-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: app
+  namespace: mos-step-1
+spec:
+  secretName: app-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  issuerRef:
+    name: development-ca
+    kind: Issuer
+  dnsNames:
+    - localhost
+    - app
+    - app.mos-step-1.svc
+    - booking.127.0.0.1.nip.io
+    - booking.127.0.0.1.sslip.io
+  ipAddresses: [127.0.0.1]
+  usages: [digital signature, key encipherment, server auth]
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres
+  namespace: mos-step-1
+spec:
+  secretName: postgres-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  issuerRef:
+    name: development-ca
+    kind: Issuer
+  dnsNames: [postgres, postgres.mos-step-1.svc]
+  usages: [digital signature, key encipherment, server auth]

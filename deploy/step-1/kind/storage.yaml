@@ -1,0 +1,44 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mos-step-1-local
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mos-step-1-postgres
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: mos-step-1-local
+  claimRef:
+    namespace: mos-step-1
+    name: postgres-data
+  local:
+    path: /var/local/mos-step-1/postgres
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: [mos-step-1-control-plane]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: mos-step-1
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: mos-step-1-local
+  volumeName: mos-step-1-postgres
+  resources:
+    requests:
+      storage: 1Gi

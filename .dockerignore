@@ -1,0 +1,12 @@
+**
+!target/
+!target/quarkus-app/
+!target/quarkus-app/**
+!target/classes/
+!target/classes/com/
+!target/classes/com/milesofsmiles/
+!target/classes/com/milesofsmiles/booking/
+!target/classes/com/milesofsmiles/booking/HealthProbe.class
+!deploy/
+!deploy/step-1/
+!deploy/step-1/app-entrypoint.sh

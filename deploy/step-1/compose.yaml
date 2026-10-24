@@ -1,0 +1,74 @@
+name: mos-step-1
+services:
+  postgres:
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+    user: "70:${LOCAL_GID:-0}"
+    environment:
+      POSTGRES_DB: booking
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - install -m 0600 /tls/server.key /tmp/server.key; exec /usr/local/bin/docker-entrypoint.sh "$@"
+      - postgres-entrypoint
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/tls/server.crt
+      - -c
+      - ssl_key_file=/tmp/server.key
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../../.local/step-1/postgres:/tls:ro
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    secrets:
+      - db-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking -d booking"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    cpus: 1
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  app:
+    image: miles-of-smiles/booking:step-1
+    user: "10001:${LOCAL_GID:-0}"
+    environment:
+      QUARKUS_PROFILE: tls
+      DB_URL: jdbc:postgresql://postgres:5432/booking?sslmode=verify-full&sslrootcert=/tls/ca.crt
+      DB_USERNAME: booking
+      DB_PASSWORD_FILE: /run/secrets/db-password
+      TLS_DIR: /tls
+    volumes:
+      - ../../.local/step-1/app:/tls:ro
+    secrets:
+      - db-password
+    ports:
+      - "127.0.0.1:8443:8443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "java", "-cp", "/opt/health", "com.milesofsmiles.booking.HealthProbe", "https://localhost:8443/q/health/ready", "/tls/ca.crt"]
+      interval: 5s
+      timeout: 8s
+      retries: 20
+    mem_limit: 512m
+    cpus: 1
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+secrets:
+  db-password:
+    file: ../../.local/step-1/db-password
+volumes:
+  postgres-data:

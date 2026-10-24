@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: haproxy
+  namespace: mos-step-1
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: haproxy
+  namespace: mos-step-1
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, endpoints, pods, services, secrets, serviceaccounts]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses/status]
+    verbs: [update]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [replicasets, deployments, daemonsets]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: haproxy
+  namespace: mos-step-1
+subjects:
+  - kind: ServiceAccount
+    name: haproxy
+    namespace: mos-step-1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: haproxy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mos-step-1-haproxy-metadata
+rules:
+  - apiGroups: [""]
+    resources: [nodes, namespaces]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingressclasses]
+    verbs: [get, list, watch]
+  - apiGroups: [apiextensions.k8s.io]
+    resources: [customresourcedefinitions]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mos-step-1-haproxy-metadata
+subjects:
+  - kind: ServiceAccount
+    name: haproxy
+    namespace: mos-step-1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mos-step-1-haproxy-metadata
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: mos-step-1-haproxy
+spec:
+  controller: haproxy.org/ingress-controller
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy
+  namespace: mos-step-1
+data:
+  ssl-redirect: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: haproxy
+  namespace: mos-step-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: haproxy
+  template:
+    metadata:
+      labels:
+        app: haproxy
+    spec:
+      serviceAccountName: haproxy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: haproxy
+          image: haproxytech/kubernetes-ingress:3.2.18@sha256:edcf448e0439b7ac13a5964813ee1227cee04fc0a6bbb943d4408a243f7cc39a
+          args:
+            - --configmap=mos-step-1/haproxy
+            - --ingress.class=mos-step-1-haproxy
+            - --namespace-whitelist=mos-step-1
+            - --disable-ipv6
+            - --disable-http
+            - --disable-service-external-name
+            - --disable-config-snippets=all
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: https
+              containerPort: 8443
+            - name: health
+              containerPort: 1042
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [NET_BIND_SERVICE]
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: health}
+            periodSeconds: 3
+          livenessProbe:
+            httpGet: {path: /healthz, port: health}
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: haproxy
+  namespace: mos-step-1
+spec:
+  selector:
+    app: haproxy
+  ports:
+    - name: https
+      port: 443
+      targetPort: https
