@@ -37,7 +37,7 @@ Initialization is repeatable and never overwrites an existing fixture.
 
 | Surface | Proposed contract |
 | --- | --- |
-| `GET /api/booking-requests/{id}` | Return the stored fixture as JSON; unknown identifiers return 404; malformed identifiers return 400 |
+| `GET /api/bookings/{id}` | Return the stored fixture as JSON; unknown identifiers return 404; malformed identifiers return 400 |
 | `GET /q/health/live` | Report application liveness independently of database availability |
 | `GET /q/health/ready` | Report readiness only when the database is usable |
 | Clock | Inject `Clock`; deterministic fixtures/tests use a fixed UTC instant; ordinary execution uses UTC |

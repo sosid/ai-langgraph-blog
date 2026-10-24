@@ -9,7 +9,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 
-@Path("/api/booking-requests")
+@Path("/api/bookings")
 @Produces(MediaType.APPLICATION_JSON)
 public class BookingResource {
     private final BookingRepository repository;

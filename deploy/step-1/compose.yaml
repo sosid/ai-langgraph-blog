@@ -8,6 +8,11 @@ services:
       POSTGRES_USER: booking
       POSTGRES_PASSWORD_FILE: /run/secrets/db-password
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - install -m 0600 /tls/server.key /tmp/server.key; exec /usr/local/bin/docker-entrypoint.sh "$@"
+      - postgres-entrypoint
     command:
       - postgres
       - -c
@@ -15,7 +20,7 @@ services:
       - -c
       - ssl_cert_file=/tls/server.crt
       - -c
-      - ssl_key_file=/tls/server.key
+      - ssl_key_file=/tmp/server.key
       - -c
       - hba_file=/etc/postgresql/pg_hba.conf
     volumes:

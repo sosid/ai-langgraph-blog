@@ -21,15 +21,15 @@ class BookingApiIT {
 
     @Test
     void apiReturnsPersistedFixtureAndValidatesIdentifiers() {
-        given().get("/api/booking-requests/" + BookingRequest.FIXTURE_ID)
+        given().get("/api/bookings/" + BookingRequest.FIXTURE_ID)
                 .then().statusCode(200)
                 .body("id", equalTo(BookingRequest.FIXTURE_ID.toString()))
                 .body("reference", equalTo(BookingRequest.FIXTURE_REFERENCE))
                 .body("createdAt", equalTo("2026-01-02T10:00:00Z"));
-        given().get("/api/booking-requests/not-a-uuid").then().statusCode(400)
+        given().get("/api/bookings/not-a-uuid").then().statusCode(400)
                 .body("code", equalTo("INVALID_ID"));
-        given().get("/api/booking-requests/1-1-1-1-1").then().statusCode(400);
-        given().get("/api/booking-requests/00000000-0000-4000-8000-000000000099")
+        given().get("/api/bookings/1-1-1-1-1").then().statusCode(400);
+        given().get("/api/bookings/00000000-0000-4000-8000-000000000099")
                 .then().statusCode(404).body("code", equalTo("NOT_FOUND"));
     }
 
@@ -66,13 +66,13 @@ class BookingApiIT {
         try {
             given().get("/q/health/live").then().statusCode(200);
             given().get("/q/health/ready").then().statusCode(503);
-            given().get("/api/booking-requests/" + BookingRequest.FIXTURE_ID)
+            given().get("/api/bookings/" + BookingRequest.FIXTURE_ID)
                     .then().statusCode(503).body("code", equalTo("STORAGE_UNAVAILABLE"));
         } finally {
             docker.unpauseContainerCmd(id).exec();
         }
         given().get("/q/health/ready").then().statusCode(200);
-        given().get("/api/booking-requests/" + BookingRequest.FIXTURE_ID).then().statusCode(200);
+        given().get("/api/bookings/" + BookingRequest.FIXTURE_ID).then().statusCode(200);
     }
 
     @Test

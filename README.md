@@ -13,7 +13,8 @@ any deployment promise as verified.
 
 ## Build from the repository root
 
-Use a Java 25 JDK, Docker with a running daemon, Bash, OpenSSL, and Python 3.
+Use a Java 25 JDK, Docker with a running daemon, Bash, OpenSSL, Python 3, and
+`unzip`.
 Set `JAVA_HOME` to Java 25; the build rejects Java 27 rather than silently
 changing the chapter baseline. No model credentials or kind cluster are needed
 for the standard build.
@@ -50,7 +51,7 @@ scripts/check-persistence.sh compose
 ```
 
 The API is available at
-`https://booking.127.0.0.1.nip.io:8443/api/booking-requests/00000000-0000-4000-8000-000000000001`.
+`https://booking.127.0.0.1.nip.io:8443/api/bookings/00000000-0000-4000-8000-000000000001`.
 The equivalent `booking.127.0.0.1.sslip.io` route has the same certificate SAN.
 The smoke script uses `curl --resolve` for deterministic loopback resolution
 while still validating the requested hostname and CA. Browser access depends
@@ -165,7 +166,7 @@ single-instance and non-HA; NetworkPolicy enforcement is not claimed.
 
 ## API boundary
 
-`GET /api/booking-requests/{id}` returns one stored synthetic request, 400 for a
+`GET /api/bookings/{id}` returns one stored synthetic request, 400 for a
 malformed UUID, 404 for an absent request, and 503 for a storage failure.
 It does not confirm a reservation, check eligibility, price a rental, allocate
 a car, take payment, or provide authentication. Do not expose it to the internet.
