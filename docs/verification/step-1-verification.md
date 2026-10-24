@@ -52,7 +52,44 @@ except missing-comment warnings; generated API pages are not committed.
 | `docker build -f deploy/step-1/Dockerfile -t miles-of-smiles/booking:step-1 .` | Exit 0; module application and standalone probe copied; configured user `10001:0` |
 | Generated-output ignores | Module package, Javadoc output, and PKI private material excluded by Git; Docker context remains an explicit artifact allowlist |
 | Compose runtime, endpoint and restart/persistence | Unrun/blocked for this correction: no existing lab containers or volumes; creating persistent lab state was not authorized |
-| kind runtime, issuance, ingress and persistence | Unrun/blocked for this correction: no kubeconfig or confirmed existing context; no cluster or namespace created |
+| `kind create cluster --config deploy/step-1/kind/cluster.yaml --kubeconfig <isolated-session-file> --retain --wait 120s` | Exit 0 after node-local `/dev/kmsg` repair; node `mos-step-1-control-plane` Ready, Kubernetes v1.35.0 |
+| Booking image import to kind node | Exit 0; containerd lists `docker.io/miles-of-smiles/booking:step-1` at the exact application image digest above |
+| `CONFIRM_KIND_CONTEXT=kind-mos-step-1 scripts/check-kind-prerequisites.sh` | Exit 1; missing kernel iptables comment match |
+| `scripts/install-cert-manager.sh` and `scripts/kind-prepare.sh` with explicit context confirmation | Both exit 1 at preflight, before controller or chapter resource changes |
+| kind runtime, issuance, ingress and persistence | Blocked for this correction: kube-proxy independently logs failed Service-rule insertion; no chapter namespace/workloads, endpoint smoke, or persistence result |
+
+### Authorized fresh kind attempt
+
+After the initial draft PR, the user explicitly required creating a kind cluster
+to verify the correction. There were no existing kind clusters or kubeconfig.
+Checksum-verified kind v0.33.0 and kubectl v1.35.0 were restored in session
+storage. The dedicated `mos-step-1` cluster uses the pinned repository node
+image. `KUBECONFIG` points to a private session file for every command; no
+pre-existing user context is selected or replaced.
+
+During creation, kubelet repeatedly exited with
+`open /dev/kmsg: no such file or directory`. Creating that character device
+(major/minor `1:11`, mode `600`) only inside `mos-step-1-control-plane` and
+restarting its kubelet let the original creation command complete. No cluster
+was deleted or recreated. The node reports `Ready`, and the rebuilt application
+image was imported with the platform-specific `ctr` mechanism already used by
+`scripts/kind-load-images.sh`. This verifies image availability, not a running
+application.
+
+The documented networking preflight then failed:
+`Extension comment revision 0 not supported` and `RULE_APPEND failed`.
+Kube-proxy logs separately show `RULE_INSERT failed` while creating
+`KUBE-EXTERNAL-SERVICES` chain jumps. A temporary, unreferenced legacy-backend
+chain also failed to add a comment-matched rule, ruling out a simple switch
+from nft-backed iptables to the legacy backend. Both diagnostic chains were
+removed. No host firewall, routing, or kernel security controls were weakened.
+
+The install and prepare entry points reproduced the failure before changing
+controller or chapter resources. The chapter namespace does not exist; no
+Issuer, Certificate, PostgreSQL PVC, booking workload, or ingress is claimed.
+The cluster and imported image are retained. Full deployment effectiveness
+remains unverified until a kind-capable host passes the unchanged networking
+preflight and the documented issuance/endpoint/restart/persistence checks.
 
 The initial shell's Java 27 was correctly rejected by Enforcer. A
 checksum-verified Java 25 JDK and missing Compose plugin were restored outside
@@ -65,8 +102,8 @@ Manual diff/editorial review covers the root/module ownership split, every moved
 source link, artifact paths, unchanged API/configuration, and preservation of
 Step 0. All 60 local Markdown links/anchors across 15 Markdown files, the three
 article external references (HTTP 200), whitespace, and credential patterns in
-54 tracked files pass checks for this correction. This is not an independent security audit or a
-production qualification. Existing build dependency/Mockito/native-access
+54 tracked files pass checks for this correction. This is not an independent
+security audit or a production qualification. Existing build dependency/Mockito/native-access
 warnings remain. No generated private inputs, build output, real PII, or future
 service code is included.
 

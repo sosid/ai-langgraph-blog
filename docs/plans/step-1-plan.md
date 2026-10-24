@@ -36,9 +36,15 @@ versions, deployment topology, and threat/failure boundaries remain unchanged.
 
 Recheck root compile/verify, selected-module verification, Javadoc generation,
 PKI, Docker packaging, documentation links, and affected Compose paths. The kind
-path requires an explicitly confirmed existing context; no cluster creation or
-persistent-data deletion is authorized by this correction. Record unavailable
-gates rather than inheriting historical runtime evidence as a fresh pass.
+path initially required an explicitly confirmed existing context. The user then
+explicitly authorized creating the dedicated `mos-step-1` kind cluster to verify
+the correction. Use its chapter resources and explicit context, keep kubeconfig
+isolated from other user contexts, and preserve all cluster and persistent state.
+This does not authorize replacing an existing cluster, deleting persistent data,
+or weakening host networking/security controls. Expand the article to explain
+why the initial single-project build was sufficient and why the series now
+adopts modules. Record unavailable gates rather than inheriting historical
+runtime evidence as a fresh pass.
 
 ### Original chapter increment
 

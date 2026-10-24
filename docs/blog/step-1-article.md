@@ -16,9 +16,11 @@ service path is demonstrated. Host-published Compose access and the Kubernetes
 HAProxy/cert-manager path are **blocked in this environment**, not verified.
 The [claim-to-evidence record](../verification/step-1-verification.md) separates
 these observations. The Maven-layout correction reruns build/test/PKI and image
-packaging checks, not deployments: no existing Compose lab or confirmed kind
-context is available. Internal Compose observations below belong to the original
-candidate. This chapter is not yet an accepted runtime milestone.
+packaging checks. A newly authorized dedicated kind cluster is `Ready` and
+contains the rebuilt booking image, but its networking preflight fails before
+controller or workload deployment. No correction-time API or persistence pass is
+claimed. Internal Compose observations below belong to the original candidate.
+This chapter is not yet an accepted runtime milestone.
 
 ## Starting point and learning outcomes
 
@@ -107,6 +109,50 @@ is a 404. A failed database is not "missing": the
 [`exception mapper`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/BookingStorageExceptionMapper.java)
 returns 503 with a stable code and logs the SQL state, without returning the
 provider's exception details to the caller.
+
+## Why introduce Maven modules after starting with one project?
+
+The first Step 1 implementation was a single Quarkus project at the repository
+root: one `pom.xml`, one `src/`, and one `target/`. That was sufficient to
+establish the first executable baseline. There was only a booking fixture to
+build, so a parent project and module list would not yet have separated any
+applications. We keep that starting point explicit rather than pretending the
+series began with a multi-service implementation.
+
+The roadmap will introduce separately owned services in later chapters. Keeping
+each new application's code in the same root `src/` would mix their dependency,
+configuration, test, and packaging boundaries. Giving every service a completely
+independent build is another valid choice, but here it would duplicate the
+Java baseline and pinned build configuration. We choose a Maven reactor: Maven
+reads a parent project's module list and builds the selected projects together.
+This provides one reproducible root build while keeping each service's code and
+application dependencies local.
+
+This correction changes the build structure before the next service arrives:
+
+```text
+Original Step 1                 Corrected layout
+pom.xml (Quarkus application)   pom.xml (parent and reactor, packaging=pom)
+src/main/                      source/booking-service/pom.xml (application)
+src/test/                      source/booking-service/src/main/
+target/                        source/booking-service/src/test/
+                               source/booking-service/target/
+```
+
+The parent owns the version pins, Quarkus BOM, and shared plugin configuration.
+The booking module chooses its application dependencies and activates its
+Quarkus and test plugins. That distinction matters: central plugin management
+does not mean every future module must package a Quarkus application or inherit
+all booking dependencies. The root POM is no longer a runnable application.
+These are Maven build modules, not Java Platform Module System modules.
+
+The cost is a parent POM, a module POM, and longer source and artifact paths.
+Tests must resolve repository-level lab scripts explicitly, and Docker must copy
+the module's output rather than root `target/`. The benefit is a clear place for
+each later service without duplicating the common build policy. No fleet,
+rental, or payment module is created early. A Maven module is not a runtime
+service boundary by itself: the current system still runs the same booking
+application and PostgreSQL, with the same read-only API and authority limits.
 
 ## Build it before deploying it
 
@@ -285,6 +331,19 @@ before changing deployment resources; it tests an unreferenced temporary chain
 and cleans it up. This check reports the missing prerequisite explicitly. It
 does not substitute for a healthy CNI or authorize changing host network
 security controls.
+
+The Maven-module correction repeated the cluster exercise rather than assuming
+the earlier diagnosis still applied. A fresh, explicitly authorized
+`mos-step-1` cluster reached `Ready` after restoring the missing `/dev/kmsg`
+device only inside its node. The rebuilt booking image was imported into that
+node with the image ID recorded in the verification record. The documented
+preflight again failed on the iptables comment match; kube-proxy independently
+logged failed Service-rule insertion, and an isolated legacy-backend probe
+failed too. The install and prepare scripts stopped before installing
+cert-manager or creating chapter workloads. Thus the corrected module packages
+and its image can be loaded into kind, but the normal issuer, ingress, endpoint,
+and restart/persistence path remains blocked by the host kernel. Neither the
+imported image nor a `Ready` control-plane node proves application behavior.
 
 ## Failure boundaries and limitations
 

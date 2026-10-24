@@ -11,8 +11,9 @@ controller/ingress walkthrough are blocked in the current environment. See the
 [verification record](docs/verification/step-1-verification.md) before treating
 any deployment promise as verified.
 The current Maven-layout correction rechecks the build, tests, PKI, and image
-packaging; the internal Compose observations are historical, not a fresh
-deployment pass.
+packaging. Its newly authorized kind cluster is `Ready` and contains the rebuilt
+booking image, but the networking prerequisite fails before chapter deployment.
+The internal Compose observations are historical, not a fresh deployment pass.
 
 ## Build from the repository root
 
