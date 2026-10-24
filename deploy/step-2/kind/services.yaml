@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata: {name: booking, namespace: mos-step-2}
+    spec:
+      replicas: 1
+      selector: {matchLabels: {app: booking}}
+      template:
+        metadata: {labels: {app: booking}}
+        spec:
+          automountServiceAccountToken: false
+          securityContext: &identity
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+          containers:
+            - name: app
+              image: miles-of-smiles/booking:step-2
+              imagePullPolicy: Never
+              env:
+                - &url {name: DB_URL, value: "jdbc:postgresql://postgres:5432/records?sslmode=verify-full&sslrootcert=/tls/ca.crt"}
+                - &profile {name: QUARKUS_PROFILE, value: tls}
+                - &tlsdir {name: TLS_DIR, value: /tls}
+                - {name: DB_USERNAME, value: booking_app}
+                - &password {name: DB_PASSWORD_FILE, value: /run/secrets/password}
+              ports: [{containerPort: 8443}]
+              volumeMounts: &mounts
+                - {name: tls, mountPath: /tls, readOnly: true}
+                - {name: password, mountPath: /run/secrets, readOnly: true}
+                - {name: tmp, mountPath: /tmp}
+              readinessProbe: &ready
+                exec:
+                  command: [java, "-cp", /opt/health, com.milesofsmiles.booking.HealthProbe, "https://localhost:8443/q/health/ready", /tls/ca.crt]
+                initialDelaySeconds: 5
+                periodSeconds: 5
+                timeoutSeconds: 8
+              livenessProbe: &live
+                exec:
+                  command: [java, "-cp", /opt/health, com.milesofsmiles.booking.HealthProbe, "https://localhost:8443/q/health/live", /tls/ca.crt]
+                initialDelaySeconds: 30
+                periodSeconds: 15
+                timeoutSeconds: 8
+              resources: &resources
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: "1", memory: 384Mi}
+              securityContext: &security
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities: {drop: [ALL]}
+          volumes:
+            - &tls {name: tls, secret: {secretName: app-tls, defaultMode: 0440}}
+            - {name: password, secret: {secretName: booking-runtime, defaultMode: 0440}}
+            - &tmp {name: tmp, emptyDir: {medium: Memory, sizeLimit: 64Mi}}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata: {name: rental, namespace: mos-step-2}
+    spec:
+      replicas: 1
+      selector: {matchLabels: {app: rental}}
+      template:
+        metadata: {labels: {app: rental}}
+        spec:
+          automountServiceAccountToken: false
+          securityContext: *identity
+          containers:
+            - name: app
+              image: miles-of-smiles/rental:step-2
+              imagePullPolicy: Never
+              env:
+                - *url
+                - *profile
+                - *tlsdir
+                - {name: DB_USERNAME, value: rental_app}
+                - *password
+              ports: [{containerPort: 8443}]
+              volumeMounts: *mounts
+              readinessProbe: *ready
+              livenessProbe: *live
+              resources: *resources
+              securityContext: *security
+          volumes:
+            - *tls
+            - {name: password, secret: {secretName: rental-runtime, defaultMode: 0440}}
+            - *tmp
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata: {name: fleet, namespace: mos-step-2}
+    spec:
+      replicas: 1
+      selector: {matchLabels: {app: fleet}}
+      template:
+        metadata: {labels: {app: fleet}}
+        spec:
+          automountServiceAccountToken: false
+          securityContext: *identity
+          containers:
+            - name: app
+              image: miles-of-smiles/fleet:step-2
+              imagePullPolicy: Never
+              env:
+                - *url
+                - *profile
+                - *tlsdir
+                - {name: DB_USERNAME, value: fleet_app}
+                - *password
+              ports: [{containerPort: 8443}]
+              volumeMounts: *mounts
+              readinessProbe: *ready
+              livenessProbe: *live
+              resources: *resources
+              securityContext: *security
+          volumes:
+            - *tls
+            - {name: password, secret: {secretName: fleet-runtime, defaultMode: 0440}}
+            - *tmp

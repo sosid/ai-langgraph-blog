@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: batch/v1
+    kind: Job
+    metadata: {name: booking-migrate, namespace: mos-step-2}
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext: &identity
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+          containers:
+            - name: migrate
+              image: miles-of-smiles/booking:step-2
+              imagePullPolicy: Never
+              env:
+                - &url {name: DB_URL, value: "jdbc:postgresql://postgres:5432/records?sslmode=verify-full&sslrootcert=/tls/ca.crt"}
+                - {name: DB_USERNAME, value: booking_migrator}
+                - &password {name: DB_PASSWORD_FILE, value: /run/secrets/password}
+                - {name: MIGRATION_MAIN, value: com.milesofsmiles.booking.BookingMigrationMain}
+              volumeMounts: &mounts
+                - {name: tls, mountPath: /tls, readOnly: true}
+                - {name: password, mountPath: /run/secrets, readOnly: true}
+                - {name: tmp, mountPath: /tmp}
+              resources: &resources
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: "1", memory: 384Mi}
+              securityContext: &security
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities: {drop: [ALL]}
+          volumes:
+            - &tls {name: tls, secret: {secretName: app-tls, defaultMode: 0440}}
+            - {name: password, secret: {secretName: booking-migrator, defaultMode: 0440}}
+            - &tmp {name: tmp, emptyDir: {medium: Memory, sizeLimit: 64Mi}}
+  - apiVersion: batch/v1
+    kind: Job
+    metadata: {name: rental-migrate, namespace: mos-step-2}
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext: *identity
+          containers:
+            - name: migrate
+              image: miles-of-smiles/rental:step-2
+              imagePullPolicy: Never
+              env:
+                - *url
+                - {name: DB_USERNAME, value: rental_migrator}
+                - *password
+                - {name: MIGRATION_MAIN, value: com.milesofsmiles.rental.RentalMigrationMain}
+              volumeMounts: *mounts
+              resources: *resources
+              securityContext: *security
+          volumes:
+            - *tls
+            - {name: password, secret: {secretName: rental-migrator, defaultMode: 0440}}
+            - *tmp
+  - apiVersion: batch/v1
+    kind: Job
+    metadata: {name: fleet-migrate, namespace: mos-step-2}
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext: *identity
+          containers:
+            - name: migrate
+              image: miles-of-smiles/fleet:step-2
+              imagePullPolicy: Never
+              env:
+                - *url
+                - {name: DB_USERNAME, value: fleet_migrator}
+                - *password
+                - {name: MIGRATION_MAIN, value: com.milesofsmiles.fleet.FleetMigrationMain}
+              volumeMounts: *mounts
+              resources: *resources
+              securityContext: *security
+          volumes:
+            - *tls
+            - {name: password, secret: {secretName: fleet-migrator, defaultMode: 0440}}
+            - *tmp

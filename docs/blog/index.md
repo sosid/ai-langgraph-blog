@@ -13,7 +13,8 @@ Read [`story.md`](../../story.md) for the customer journey and
 | Step | Title | Type | Article | Status |
 | --- | --- | --- | --- | --- |
 | 0 | The Rental and Evidence Contract | Documentation only | [`step-0-article.md`](step-0-article.md) | Accepted by the user |
-| 1 | A Booking Request You Can Reproduce | Java / PostgreSQL baseline | [`step-1-article.md`](step-1-article.md) | Implementation candidate; deployment gates blocked |
+| 1 | A Booking Request You Can Reproduce | Java / PostgreSQL baseline | [`step-1-article.md`](step-1-article.md) | Accepted by the user; historical deployment gaps retained |
+| 2 | A Record Has an Owner | Service records / migration / constraints | [`step-2-article.md`](step-2-article.md) | Implementation candidate; node-local kind fallback demonstrated; normal deployment gates blocked |
 
 ## How to read a chapter
 
@@ -28,6 +29,8 @@ failure outcomes for the rental lifecycle. It contains no code, no build, and no
 runtime claims.
 
 Executable projects use Maven modules under `source/<service-name>/`. Step 1
-currently provides only [`booking-service`](../../source/booking-service/pom.xml);
-the [root build guide](../../README.md#maven-service-layout) explains the reactor,
+introduced [`booking-service`](../../source/booking-service/pom.xml); Step 2 adds
+[`rental-service`](../../source/rental-service/pom.xml) and
+[`fleet-service`](../../source/fleet-service/pom.xml).
+The [root build guide](../../README.md#maven-service-layout) explains the reactor,
 module selection, and generated artifact paths.

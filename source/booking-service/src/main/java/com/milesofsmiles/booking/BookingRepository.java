@@ -21,8 +21,8 @@ public class BookingRepository {
     }
 
     /**
-     * Creates the fixture table and inserts the known request in one transaction.
-     * An existing fixture is never overwritten; this is not a migration mechanism.
+     * Inserts the known request in the migrated schema in one transaction.
+     * An existing fixture is never overwritten.
      *
      * @param createdAt creation time used only when inserting the fixture
      * @throws BookingStorageException if initialization cannot commit
@@ -31,17 +31,8 @@ public class BookingRepository {
         try (var connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
             try {
-                try (var statement = connection.createStatement()) {
-                    statement.execute("""
-                            CREATE TABLE IF NOT EXISTS booking_request_fixture (
-                                id UUID PRIMARY KEY,
-                                reference TEXT NOT NULL,
-                                created_at TIMESTAMPTZ NOT NULL
-                            )
-                            """);
-                }
                 try (var statement = connection.prepareStatement("""
-                        INSERT INTO booking_request_fixture (id, reference, created_at)
+                        INSERT INTO booking.booking_request_fixture (id, reference, created_at)
                         VALUES (?, ?, ?) ON CONFLICT (id) DO NOTHING
                         """)) {
                     statement.setObject(1, BookingRequest.FIXTURE_ID);
@@ -73,7 +64,7 @@ public class BookingRepository {
     public Optional<BookingRequest> find(UUID id) {
         try (var connection = dataSource.getConnection();
                 var statement = connection.prepareStatement("""
-                        SELECT id, reference, created_at FROM booking_request_fixture WHERE id = ?
+                        SELECT id, reference, created_at FROM booking.booking_request_fixture WHERE id = ?
                         """)) {
             statement.setObject(1, id);
             try (var result = statement.executeQuery()) {

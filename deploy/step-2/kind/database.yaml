@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mos-step-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: mos-step-2
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: postgres}
+  template:
+    metadata:
+      labels: {app: postgres}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+      containers:
+        - name: postgres
+          image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - install -m 0600 /tls/server.key /tmp/server.key; exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tmp/server.key -c hba_file=/bootstrap/pg_hba.conf
+          env:
+            - {name: POSTGRES_DB, value: records}
+            - {name: POSTGRES_USER, value: bootstrap}
+            - {name: POSTGRES_PASSWORD_FILE, value: /run/secrets/db-password}
+            - {name: POSTGRES_INITDB_ARGS, value: "--auth-host=scram-sha-256"}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          ports: [{containerPort: 5432}]
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: tls, mountPath: /tls, readOnly: true}
+            - {name: credentials, mountPath: /run/secrets, readOnly: true}
+            - {name: bootstrap, mountPath: /bootstrap, readOnly: true}
+            - name: bootstrap
+              mountPath: /docker-entrypoint-initdb.d/01-bootstrap.sh
+              subPath: bootstrap.sh
+              readOnly: true
+          readinessProbe:
+            exec: {command: ["pg_isready", "-U", "bootstrap", "-d", "records"]}
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          livenessProbe:
+            exec: {command: ["pg_isready", "-U", "bootstrap", "-d", "records"]}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/local/mos-step-2/postgres
+            type: Directory
+        - {name: tls, secret: {secretName: postgres-tls, defaultMode: 0440}}
+        - {name: credentials, secret: {secretName: bootstrap-credentials, defaultMode: 0440}}
+        - {name: bootstrap, configMap: {name: bootstrap, defaultMode: 0555}}

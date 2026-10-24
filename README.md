@@ -4,16 +4,18 @@ An incremental rental-system teaching project. Start with the
 [chapter index](docs/blog/index.md), [rental story](story.md), and
 [series contract](plan.md).
 
-Step 0 is accepted. Step 1 is an implementation candidate: its Java build,
-mock-based unit tests, PostgreSQL Testcontainers tests, and development PKI checks
-pass. Compose runs internally, but published-port access and the kind
-controller/ingress walkthrough are blocked in the current environment. See the
-[verification record](docs/verification/step-1-verification.md) before treating
-any deployment promise as verified.
-The current Maven-layout correction rechecks the build, tests, PKI, and image
-packaging. Its newly authorized kind cluster is `Ready` and contains the rebuilt
-booking image, but the networking prerequisite fails before chapter deployment.
-The internal Compose observations are historical, not a fresh deployment pass.
+Steps 0 and 1 are accepted by the user. Step 2 adds service-owned booking,
+rental and fleet records, migrations, restricted runtime roles, versioned
+contracts, request hashes and interval constraints. Start with the
+[Step 2 article](docs/blog/step-2-article.md) and
+[deployment guide](deploy/step-2/README.md).
+
+Build/tests and a user-approved single-node kind `hostNetwork`/port-forward
+fallback are demonstrated. Host-published Compose access and normal kind
+pod/Service/ingress networking remain blocked in this environment; internal
+Compose traffic is demonstrated separately. See the
+[Step 2 evidence](docs/verification/step-2-verification.md).
+User acceptance does not retroactively verify Step 1's recorded deployment gaps.
 
 ## Build from the repository root
 
@@ -31,26 +33,32 @@ scripts/check-pki.sh
 
 Maven 3.9.11 is downloaded by the checksum-pinned wrapper. The first build needs
 network access to Maven Central and the pinned container registry images.
-`verify` runs seven mock-based unit tests and five PostgreSQL integration tests,
-including a database outage, recovery, verified JDBC TLS, and HTTPS trust
-rejection. Test reports, packaged application, and ephemeral test certificates
-stay under ignored `source/booking-service/target/`; the standalone PKI check
-uses root `target/`.
+`verify` runs mock-based unit tests and PostgreSQL integration tests across all
+three modules, including ownership, schema upgrades, duplicate/concurrent
+requests, interval constraints, the original outage/recovery checks and TLS
+trust rejection. Test reports, packaged applications, and ephemeral test
+certificates stay under each ignored `source/<service-name>/target/`; the
+standalone PKI check uses root `target/`.
 
 ## Maven service layout
 
 The root [`pom.xml`](pom.xml) is the parent and reactor aggregator. It pins the
 Java baseline, Quarkus BOM, and shared plugin configuration without packaging an
 application. Each code project is a Maven module under `source/<service-name>/`.
-Only [`source/booking-service`](source/booking-service/pom.xml) exists today;
-future services are added only in their authorized chapters.
+The registered modules are [`booking-service`](source/booking-service/pom.xml),
+[`rental-service`](source/rental-service/pom.xml) and
+[`fleet-service`](source/fleet-service/pom.xml). Future services are added only
+in their authorized chapters.
 
 ```text
 pom.xml                         parent and module list
 source/booking-service/pom.xml   booking dependencies and application plugins
 source/booking-service/src/      Java sources, configuration, and tests
 source/booking-service/target/   module-local generated output (ignored)
+source/rental-service/           draft rental owner
+source/fleet-service/            vehicle and interval owner
 deploy/step-1/                   chapter deployment resources
+deploy/step-2/                   isolated owner/migrator deployment resources
 scripts/                        repository-level lab tooling
 ```
 
@@ -71,7 +79,25 @@ target. Java 27, ARM, native images, and production deployment are not qualified
 If your network requires a private CA, use your organization's approved Java
 trust store. Do not disable Maven certificate verification.
 
-## Compose: an application and a database
+## Current Step 2 deployment
+
+Follow [deploy/step-2/README.md](deploy/step-2/README.md) for exact commands.
+It covers private inputs, three locally built service images, owner-only
+migration processes, trusted API requests, role denials, persistence and
+data-preserving stop instructions. The legacy fixture API is preserved, but
+runtime startup now requires the Step 2 schema migrations.
+
+The approved kind fallback avoids HAProxy and uses foreground loopback
+port-forwards to node-local HTTPS services. It is explicitly a single-node
+`hostNetwork` lab, not evidence that broken CNI/ClusterIP routing works.
+Standard Maven verification remains independent of kind.
+
+## Historical Step 1 Compose: an application and a database
+
+The remaining Step 1 walkthrough describes the accepted predecessor
+`daed623a6c32383b96b402fe4bf27f22778b060a`. Use that snapshot to reproduce it.
+Do not combine current migrated service binaries with Step 1's unmigrated
+database/resources. Historical gates and limitations are retained below.
 
 Install Docker Compose v5.6.1. Generate development-only inputs once:
 
