@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: booking
+  namespace: mos-step-1
+spec:
+  ingressClassName: mos-step-1-haproxy
+  tls:
+    - secretName: app-tls
+      hosts:
+        - booking.127.0.0.1.nip.io
+        - booking.127.0.0.1.sslip.io
+  rules:
+    - host: booking.127.0.0.1.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  name: https
+    - host: booking.127.0.0.1.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  name: https

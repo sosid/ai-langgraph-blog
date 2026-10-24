@@ -22,10 +22,10 @@ policies, dependencies, schemas, or base invalidates relevant evidence.
 
 | Field | Value |
 | --- | --- |
-| Step | 0 — Rental and Evidence Contract |
-| Base revision | `f5fecbac8a063b9b59bacb22e87ead17a144dcc7` (empty `development` root) |
-| Candidate | Step 0 documentation set on `features/step-0` (see Step 0 verification record) |
-| Type | Documentation only — no code, build, deployment, or runtime claim |
+| Step | 1 - Reproducible booking baseline |
+| Base revision | `5e0c173a11d57b64d0864379e03824c282eb4543` (Step 0 accepted by the user) |
+| Candidate | Local `features/step-1` worktree; exact source fingerprint and evidence in `docs/verification/step-1-verification.md` |
+| Type | Runtime implementation candidate; deployment acceptance remains blocked |
 
 ## Step 0 promises (delivered in this chapter)
 
@@ -50,7 +50,7 @@ them.
 
 | ID | Promise | Owning boundary | Introducing step | Status |
 | --- | --- | --- | --- | --- |
-| P-BOOK-BASELINE | Reproducible booking baseline: clean compile/verify, both deployment paths, restart/persistence | Booking | 1 | planned |
+| P-BOOK-BASELINE | Reproducible booking baseline: clean compile/verify, both deployment paths, restart/persistence | Booking | 1 | blocked (build/tests pass; host-published Compose and kind end-to-end gates unavailable) |
 | P-RECORDS | Service-owned records with isolated roles, versioned contracts, request hashes, interval constraints | Booking / Fleet / Rental | 2 | planned |
 | P-RULES | Deterministic eligibility/pricing replay same evidence+rule version to same outcome; model cannot weaken a rule | Booking / Policy and evidence | 3 | planned |
 | P-AUDIT-CORRELATION | OpenTelemetry correlation with durable decision evidence; audit survives sampling/export loss | Audit evidence | 3 (extended through 27) | planned |
@@ -76,3 +76,22 @@ them.
 
 New promises are added as later steps are authorized. Statuses move only when a
 named frozen candidate provides the corresponding evidence.
+
+## Step 1 promise breakdown
+
+Step 0 remains accepted by the user. No Step 0 runtime promise is retroactively
+verified by this increment. The fixture is a synthetic request, not a confirmed
+reservation. The Step 1 source fingerprint, observed toolchain, commands, and
+limitations are recorded in
+[`verification/step-1-verification.md`](verification/step-1-verification.md).
+
+| ID | Promise | Owner | Source / check | Status |
+| --- | --- | --- | --- | --- |
+| P1-BUILD | Java 25 pinned baseline compiles and passes standard verification without model credentials or kind | Booking | `pom.xml`, Maven wrapper; root compile/verify | verified at revision (source fingerprint in Step 1 record) |
+| P1-FIXTURE | Read a stable synthetic request; deterministic initialization preserves existing fixture | Booking | `BookingRepository`, `FixtureInitializer`, `BookingBaselineTest`, `BookingApiIT` | verified at revision (source fingerprint in Step 1 record) |
+| P1-FAILURE | Malformed/missing requests are explicit; dependency failure is 503, readiness down and liveness up; recovery restores reads | Booking | `BookingResource`, exception mapper, datasource health; mock and PostgreSQL outage tests | verified at revision (source fingerprint in Step 1 record) |
+| P1-TLS | Verify application HTTPS and JDBC server TLS; reject untrusted certificates | Booking | `BookingApiIT`, `HealthProbe`, `scripts/check-pki.sh` | verified at revision (test and internal Compose paths only) |
+| P1-PKI | Local development CA/leaf bootstrap, private-file permissions, hostname/expiry rejection, CA-preserving renewal | Local operator | `scripts/pki.sh`, `scripts/check-pki.sh` | verified at revision (isolated local checks; deployed rotation not yet verified) |
+| P1-COMPOSE | Documented host endpoint and restart/persistence walkthrough | Local operator | `deploy/step-1/compose.yaml`, smoke/persistence scripts | blocked (internal health/API and database-only persistence marker observed; published-port smoke blocked) |
+| P1-KIND | Existing/dedicated authorized kind path with HAProxy, cert-manager Issuer, nip.io/sslip.io routes, retained local volume | Local operator | `deploy/step-1/kind/`, kind scripts | blocked (resource shapes checked; controller/API networking prevents end-to-end checks) |
+| P1-ROTATION | Renew deployed server certificates and prove workloads use them after restart | Local operator | Compose renewal walkthrough; kind Certificate resources | blocked overall (Compose internal renewal/served serial verified; kind and published-client path unverified) |

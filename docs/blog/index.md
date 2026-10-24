@@ -12,7 +12,8 @@ Read [`story.md`](../../story.md) for the customer journey and
 
 | Step | Title | Type | Article | Status |
 | --- | --- | --- | --- | --- |
-| 0 | The Rental and Evidence Contract | Documentation only | [`step-0-article.md`](step-0-article.md) | Candidate for review (documentation-only) |
+| 0 | The Rental and Evidence Contract | Documentation only | [`step-0-article.md`](step-0-article.md) | Accepted by the user |
+| 1 | A Booking Request You Can Reproduce | Java / PostgreSQL baseline | [`step-1-article.md`](step-1-article.md) | Implementation candidate; deployment gates blocked |
 
 ## How to read a chapter
 
