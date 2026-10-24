@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+/** Supplies a configured fixed UTC clock, or system UTC when the setting is absent. */
 public class ClockProducer {
     @Produces
     Clock clock(@ConfigProperty(name = "baseline.clock.fixed-instant") Optional<String> fixedInstant) {

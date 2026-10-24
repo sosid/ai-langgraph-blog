@@ -8,6 +8,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
+/** Starts pinned PostgreSQL with ephemeral module-local certificates for integration tests. */
 public class PostgresResource implements QuarkusTestResourceLifecycleManager {
     static final String IMAGE = "postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94";
     static PostgreSQLContainer<?> postgres;
@@ -18,7 +19,9 @@ public class PostgresResource implements QuarkusTestResourceLifecycleManager {
         try {
             Path directory = Files.createTempDirectory(Path.of("target"), "test-pki-");
             pki = directory.toAbsolutePath();
-            var builder = new ProcessBuilder("bash", "scripts/pki.sh").inheritIO();
+            Path root = Path.of(System.getProperty("baseline.repository.root")).toAbsolutePath().normalize();
+            var builder = new ProcessBuilder("bash", root.resolve("scripts/pki.sh").toString())
+                    .directory(root.toFile()).inheritIO();
             builder.environment().put("PKI_DIR", pki.toString());
             int exit = builder.start().waitFor();
             if (exit != 0) {

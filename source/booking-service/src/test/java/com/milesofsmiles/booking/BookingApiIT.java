@@ -13,6 +13,7 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.DockerClientFactory;
 
+/** Real PostgreSQL checks for HTTP outcomes, initialization, outage recovery, and server TLS. */
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 class BookingApiIT {

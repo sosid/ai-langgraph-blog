@@ -22,6 +22,11 @@ This repository documents and incrementally implements **Miles of Smiles: Buildi
 1. Confirm the approved step, accepted `development` predecessor, branch authorization, and applicable open decisions in `plan.md`. Work sequentially on the authorized `features/step-N` branch; Step 0 starts from the authorized empty root baseline.
 2. Write and obtain approval for `docs/plans/step-N-plan.md` before implementing. It must define the business increment, learning outcomes, ownership, graph/state delta, dependencies, threat/failure boundaries, deployment changes, tests, and explicit exclusions.
 3. Implement only that increment. Every feature has unit tests using mocks and integration tests using Testcontainers. Include progressive local deployment examples as required by the chapter. Keep standard verification independent of live model credentials and kind.
+   Code projects are Maven modules under `source/<service-name>/`, registered in
+   the repository-root parent/aggregator POM. Keep service dependencies, sources,
+   configuration, and tests in their owning module; root wrapper commands build
+   the reactor. Adjust artifact paths in deployment resources and documentation
+   whenever the module layout changes.
 4. Author `docs/blog/step-N-article.md` using the `technical-writing` skill. Keep article, source, tests, deployment commands, and the approved blueprint aligned during development.
 5. When chapter work is authorized, rebuild `docs/blog/index.md` cumulatively and update `docs/promise-ledger.md`. Track delivered, deferred, failed, and unverified promises separately.
 6. Freeze the candidate and use `article-to-code-verification` against that exact snapshot. Repeat affected checks after any relevant source, article, dependency, configuration, prompt, policy, schema, or base change.

@@ -23,9 +23,9 @@ policies, dependencies, schemas, or base invalidates relevant evidence.
 | Field | Value |
 | --- | --- |
 | Step | 1 - Reproducible booking baseline |
-| Base revision | `5e0c173a11d57b64d0864379e03824c282eb4543` (Step 0 accepted by the user) |
-| Candidate | Local `features/step-1` worktree; exact source fingerprint and evidence in `docs/verification/step-1-verification.md` |
-| Type | Runtime implementation candidate; deployment acceptance remains blocked |
+| Base revision | `93c882b27a44779bbf17bbf9fb4057ce09149a5f` (integrated Step 1; original chapter starts at accepted Step 0 `5e0c173a11d57b64d0864379e03824c282eb4543`) |
+| Candidate | Maven-layout correction on `fix/maven-service-modules`; current source fingerprint and evidence in `docs/verification/step-1-verification.md` |
+| Type | Corrective refactor, not a new chapter; deployment acceptance remains blocked |
 
 ## Step 0 promises (delivered in this chapter)
 
@@ -87,11 +87,11 @@ limitations are recorded in
 
 | ID | Promise | Owner | Source / check | Status |
 | --- | --- | --- | --- | --- |
-| P1-BUILD | Java 25 pinned baseline compiles and passes standard verification without model credentials or kind | Booking | `pom.xml`, Maven wrapper; root compile/verify | verified at revision (source fingerprint in Step 1 record) |
+| P1-BUILD | Java 25 pinned baseline compiles and passes standard verification without model credentials or kind | Booking | Root parent/aggregator `pom.xml`, `source/booking-service/pom.xml`, Maven wrapper; root and selected-module verification | verified at revision (current correction fingerprint in Step 1 record) |
 | P1-FIXTURE | Read a stable synthetic request; deterministic initialization preserves existing fixture | Booking | `BookingRepository`, `FixtureInitializer`, `BookingBaselineTest`, `BookingApiIT` | verified at revision (source fingerprint in Step 1 record) |
 | P1-FAILURE | Malformed/missing requests are explicit; dependency failure is 503, readiness down and liveness up; recovery restores reads | Booking | `BookingResource`, exception mapper, datasource health; mock and PostgreSQL outage tests | verified at revision (source fingerprint in Step 1 record) |
-| P1-TLS | Verify application HTTPS and JDBC server TLS; reject untrusted certificates | Booking | `BookingApiIT`, `HealthProbe`, `scripts/check-pki.sh` | verified at revision (test and internal Compose paths only) |
+| P1-TLS | Verify application HTTPS and JDBC server TLS; reject untrusted certificates | Booking | `BookingApiIT`, `HealthProbe`, `scripts/check-pki.sh` | verified at revision (current correction tests; internal Compose evidence is historical only) |
 | P1-PKI | Local development CA/leaf bootstrap, private-file permissions, hostname/expiry rejection, CA-preserving renewal | Local operator | `scripts/pki.sh`, `scripts/check-pki.sh` | verified at revision (isolated local checks; deployed rotation not yet verified) |
-| P1-COMPOSE | Documented host endpoint and restart/persistence walkthrough | Local operator | `deploy/step-1/compose.yaml`, smoke/persistence scripts | blocked (internal health/API and database-only persistence marker observed; published-port smoke blocked) |
-| P1-KIND | Existing/dedicated authorized kind path with HAProxy, cert-manager Issuer, nip.io/sslip.io routes, retained local volume | Local operator | `deploy/step-1/kind/`, kind scripts | blocked (resource shapes checked; controller/API networking prevents end-to-end checks) |
-| P1-ROTATION | Renew deployed server certificates and prove workloads use them after restart | Local operator | Compose renewal walkthrough; kind Certificate resources | blocked overall (Compose internal renewal/served serial verified; kind and published-client path unverified) |
+| P1-COMPOSE | Documented host endpoint and restart/persistence walkthrough | Local operator | `deploy/step-1/compose.yaml`, smoke/persistence scripts | blocked (correction config/image build pass; runtime unrun without authorization to create persistent lab state; earlier internal observations are historical) |
+| P1-KIND | Existing/dedicated authorized kind path with HAProxy, cert-manager Issuer, nip.io/sslip.io routes, retained local volume | Local operator | `deploy/step-1/kind/`, kind scripts | blocked (newly authorized correction cluster Ready and booking image imported; networking preflight and kube-proxy fail on missing kernel comment match before chapter deployment) |
+| P1-ROTATION | Renew deployed server certificates and prove workloads use them after restart | Local operator | Compose renewal walkthrough; kind Certificate resources | blocked overall (correction isolated PKI check passes; deployed renewal unrun; earlier internal Compose observation is historical) |

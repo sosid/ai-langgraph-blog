@@ -6,7 +6,114 @@ observations pass. Host-published Compose access and end-to-end Kubernetes
 controller/issuer/ingress/recovery gates do not pass in this environment.
 Neither installed resources nor a Ready node establish those promises.
 
-## Frozen candidate and authority
+## Maven-layout correction: current candidate
+
+The user requested Maven service modules under `source/`, aligned documentation
+and Javadocs, and a corrective PR to `development`. This is a follow-up fix,
+not an amendment of published history or authorization to merge or begin Step 2.
+The original observations below remain historical evidence, not fresh deployment
+passes for this candidate.
+
+| Field | Current correction |
+| --- | --- |
+| Integration base | `93c882b27a44779bbf17bbf9fb4057ce09149a5f` (`development`, integrated Step 1) |
+| Branch | `fix/maven-service-modules` |
+| Runtime source fingerprint | SHA-256 `950962eea168101fee1c27ce4805cb946310407cc51739221c02f8a7fb2b9054` |
+| Fingerprint definition | SHA-256 of sorted `file-sha256`, two spaces, POSIX relative path, newline records for `pom.xml`, `mvnw`, `mvnw.cmd`, `.dockerignore`, `.gitignore`, and tracked regular files under `.mvn/`, `source/`, `scripts/`, `deploy/`; 38 files; no generated output |
+| Complete candidate | Commit containing this record, identified in the corrective PR; runtime fingerprint excludes documentation to avoid self-reference |
+| Environment | Linux amd64, Temurin 25.0.5+8, Maven 3.9.11, Docker 29.1.3, Compose 5.6.1 |
+| Application image | `sha256:3f2544e34a35bed8a96243bf7e55bede0dc42674a00364579ac4e329d5f20762`, local image, not a published release |
+
+The root `pom.xml` now has `pom` packaging and aggregates
+`source/booking-service`. Shared version, BOM, and plugin management stay at the
+root; only the module declares application dependencies and activates Quarkus,
+Surefire, and Failsafe. All original sources, resources, and tests moved into
+that module. The only executable Java change resolves the repository PKI script
+through a module-specific Failsafe property; ephemeral test certificates stay in
+the module's ignored `target/`. Runtime configuration and business behavior are
+unchanged.
+
+Javadocs were reviewed against all eight application classes and three test
+classes. They describe the fixture rather than a reservation, transaction and
+missing-row semantics, explicit storage failure mapping, UTC clock/startup
+behavior, and explicit server-certificate trust. Generation uses full doclint
+except missing-comment warnings; generated API pages are not committed.
+
+| Check, from repository root under Java 25 | Correction result |
+| --- | --- |
+| `./mvnw clean compile` | Exit 0; parent plus booking module |
+| `./mvnw verify` | Exit 0; 7 mock unit tests + 5 PostgreSQL Testcontainers tests, no failures/errors/skips |
+| `./mvnw -pl source/booking-service -am verify` | Exit 0; same 12 tests, including module-relative PKI bootstrap, database outage/recovery and HTTP/JDBC TLS rejection |
+| `./mvnw -pl source/booking-service org.apache.maven.plugins:maven-javadoc-plugin:3.12.0:javadoc -Ddoclint=all,-missing -Dmaven.javadoc.failOnWarnings=true` | Exit 0 |
+| Same plugin's `test-javadoc` goal with `-Dshow=private -Ddoclint=all,-missing -Dmaven.javadoc.failOnWarnings=true` | Exit 0 |
+| `scripts/check-pki.sh` | Exit 0 on rerun; permissions, both hostnames, wrong-host/expiry rejection and CA-preserving renewal |
+| `bash -n scripts/*.sh deploy/step-1/app-entrypoint.sh` | Exit 0 |
+| `docker compose -f deploy/step-1/compose.yaml config --quiet` | Exit 0 |
+| `docker build -f deploy/step-1/Dockerfile -t miles-of-smiles/booking:step-1 .` | Exit 0; module application and standalone probe copied; configured user `10001:0` |
+| Generated-output ignores | Module package, Javadoc output, and PKI private material excluded by Git; Docker context remains an explicit artifact allowlist |
+| Compose runtime, endpoint and restart/persistence | Unrun/blocked for this correction: no existing lab containers or volumes; creating persistent lab state was not authorized |
+| `kind create cluster --config deploy/step-1/kind/cluster.yaml --kubeconfig <isolated-session-file> --retain --wait 120s` | Exit 0 after node-local `/dev/kmsg` repair; node `mos-step-1-control-plane` Ready, Kubernetes v1.35.0 |
+| Booking image import to kind node | Exit 0; containerd lists `docker.io/miles-of-smiles/booking:step-1` at the exact application image digest above |
+| `CONFIRM_KIND_CONTEXT=kind-mos-step-1 scripts/check-kind-prerequisites.sh` | Exit 1; missing kernel iptables comment match |
+| `scripts/install-cert-manager.sh` and `scripts/kind-prepare.sh` with explicit context confirmation | Both exit 1 at preflight, before controller or chapter resource changes |
+| kind runtime, issuance, ingress and persistence | Blocked for this correction: kube-proxy independently logs failed Service-rule insertion; no chapter namespace/workloads, endpoint smoke, or persistence result |
+
+### Authorized fresh kind attempt
+
+After the initial draft PR, the user explicitly required creating a kind cluster
+to verify the correction. There were no existing kind clusters or kubeconfig.
+Checksum-verified kind v0.33.0 and kubectl v1.35.0 were restored in session
+storage. The dedicated `mos-step-1` cluster uses the pinned repository node
+image. `KUBECONFIG` points to a private session file for every command; no
+pre-existing user context is selected or replaced.
+
+During creation, kubelet repeatedly exited with
+`open /dev/kmsg: no such file or directory`. Creating that character device
+(major/minor `1:11`, mode `600`) only inside `mos-step-1-control-plane` and
+restarting its kubelet let the original creation command complete. No cluster
+was deleted or recreated. The node reports `Ready`, and the rebuilt application
+image was imported with the platform-specific `ctr` mechanism already used by
+`scripts/kind-load-images.sh`. This verifies image availability, not a running
+application.
+
+The documented networking preflight then failed:
+`Extension comment revision 0 not supported` and `RULE_APPEND failed`.
+Kube-proxy logs separately show `RULE_INSERT failed` while creating
+`KUBE-EXTERNAL-SERVICES` chain jumps. A temporary, unreferenced legacy-backend
+chain also failed to add a comment-matched rule, ruling out a simple switch
+from nft-backed iptables to the legacy backend. Both diagnostic chains were
+removed. No host firewall, routing, or kernel security controls were weakened.
+
+The install and prepare entry points reproduced the failure before changing
+controller or chapter resources. The chapter namespace does not exist; no
+Issuer, Certificate, PostgreSQL PVC, booking workload, or ingress is claimed.
+The cluster and imported image are retained. Full deployment effectiveness
+remains unverified until a kind-capable host passes the unchanged networking
+preflight and the documented issuance/endpoint/restart/persistence checks.
+
+The initial shell's Java 27 was correctly rejected by Enforcer. A
+checksum-verified Java 25 JDK and missing Compose plugin were restored outside
+the repository. Maven required the pre-existing environment Java trust store;
+certificate verification was not disabled. The first isolated PKI invocation
+stopped during renewal without a diagnostic; an independent traced rerun passed.
+No PKI implementation change or fresh deployed-renewal claim is made.
+
+Manual diff/editorial review covers the root/module ownership split, every moved
+source link, artifact paths, unchanged API/configuration, and preservation of
+Step 0. All 60 local Markdown links/anchors across 15 Markdown files, the three
+article external references (HTTP 200), whitespace, and credential patterns in
+54 tracked files pass checks for this correction. This is not an independent
+security audit or a production qualification. Existing build dependency/Mockito/native-access
+warnings remain. No generated private inputs, build output, real PII, or future
+service code is included.
+
+The source fingerprint above supersedes the original fingerprint for build,
+fixture, failure, TLS-test, PKI, and module-layout claims. Original internal
+Compose observations and kind failure diagnostics below describe the earlier
+candidate only. End-to-end deployment acceptance remains blocked, and the
+corrective draft PR must not be read as a verified chapter release.
+
+## Original frozen candidate and authority (historical)
 
 | Field | Evidence |
 | --- | --- |

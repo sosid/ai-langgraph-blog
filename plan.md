@@ -16,6 +16,12 @@ Build one complete rental lifecycle rather than disconnected agent demos. Introd
 
 Use LangGraph4j for graph coordination. Pin versions and verify actual capabilities rather than assuming parity with official LangGraph or the Quarkus workshop. Build a well-designed execution harness, not a job orchestrator. Reuse maintained libraries for graph persistence, HTTP/MCP, resilience, tracing, and testing. Treat an unsupported capability as a documented spike or blocker, not a home-grown substitute without approval.
 
+Keep code projects as Maven modules under `source/<service-name>/` (for example,
+`source/booking-service`). The repository-root POM is the shared parent and
+reactor aggregator; each service owns its application dependencies, sources,
+resources, tests, and generated `target/` output. Root Maven wrapper commands
+build the reactor. Add services only when their chapter is authorized.
+
 ### Technical Boundaries
 
 - **Java and concurrency:** Java 25 is the planned baseline through Step 16. Step 17 is a conditional migration to Java 27. Before it starts, verify actual JDK/toolchain availability, Quarkus support, APIs, and preview requirements; if blocked, stop for a scope decision. Use virtual threads for suitable blocking work and retain a bounded-executor alternative. Introduce `StructuredTaskScope` only at Step 17 after compatibility verification, including preview flags where required. `ScopedValue` is bounded JVM context, not network propagation or durable state.

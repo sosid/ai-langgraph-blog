@@ -6,6 +6,7 @@ import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import java.time.Clock;
 
+/** Initializes the fixture at startup; storage failure aborts startup rather than fabricating data. */
 @ApplicationScoped
 public class FixtureInitializer {
     private final BookingRepository repository;

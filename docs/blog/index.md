@@ -26,3 +26,8 @@ each chapter's claim-to-evidence record lives under
 Step 0 is documentation only: it defines ownership, authority, evidence, and
 failure outcomes for the rental lifecycle. It contains no code, no build, and no
 runtime claims.
+
+Executable projects use Maven modules under `source/<service-name>/`. Step 1
+currently provides only [`booking-service`](../../source/booking-service/pom.xml);
+the [root build guide](../../README.md#maven-service-layout) explains the reactor,
+module selection, and generated artifact paths.

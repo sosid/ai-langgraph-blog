@@ -17,6 +17,7 @@ import java.util.Optional;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
+/** Mock-based checks for fixture, clock, input, transaction, and failure contracts. */
 class BookingBaselineTest {
     private static final Instant NOW = Instant.parse("2026-01-02T10:00:00Z");
 
