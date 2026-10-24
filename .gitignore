@@ -1,4 +1,5 @@
 /target/
+/source/*/target/
 /.local/
 .env
 *.key

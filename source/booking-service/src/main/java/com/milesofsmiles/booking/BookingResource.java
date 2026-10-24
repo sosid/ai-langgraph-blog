@@ -9,6 +9,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 
+/** Read-only HTTP boundary for the synthetic request fixture. */
 @Path("/api/bookings")
 @Produces(MediaType.APPLICATION_JSON)
 public class BookingResource {
@@ -19,6 +20,13 @@ public class BookingResource {
         this.repository = repository;
     }
 
+    /**
+     * Retrieves a request without making a reservation.
+     *
+     * @param value canonical UUID text, case-insensitive
+     * @return 200 with the request, 400 for invalid text, or 404 for a missing row
+     * @throws BookingStorageException mapped to HTTP 503 by {@link BookingStorageExceptionMapper}
+     */
     @GET
     @Path("/{id}")
     public Response find(@PathParam("id") String value) {
@@ -37,6 +45,12 @@ public class BookingResource {
                         .entity(new ApiError("NOT_FOUND", "Booking request not found")).build());
     }
 
+    /**
+     * A stable client-facing error without database provider details.
+     *
+     * @param code machine-readable outcome
+     * @param message safe client-facing explanation
+     */
     public record ApiError(String code, String message) {
     }
 }

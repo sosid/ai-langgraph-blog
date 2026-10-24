@@ -17,6 +17,31 @@ of persistent data. The user approved this blueprint and its implementation.
 
 ## Business Increment and Learning Outcomes
 
+### Approved corrective amendment: Maven modules
+
+After Step 1 was integrated into `development` at
+`93c882b27a44779bbf17bbf9fb4057ce09149a5f`, the user requested service code
+projects as Maven modules under `source/`, documentation and Javadoc alignment,
+and a corrective PR targeting `development`. This authorizes the
+`fix/maven-service-modules` branch, commit, push, and PR, not history rewriting,
+merging, tagging, new services, or Step 2 implementation.
+
+Use a root parent/aggregator and `source/booking-service` for the existing
+application, resources, and tests. Keep common version/plugin management at
+the root and application dependencies/plugin activation in the service module.
+Preserve root wrapper commands, make PKI bootstrap independent of the test
+working directory, update container artifact paths and ignored output, and
+document current source contracts. Business ownership, API, state, dependency
+versions, deployment topology, and threat/failure boundaries remain unchanged.
+
+Recheck root compile/verify, selected-module verification, Javadoc generation,
+PKI, Docker packaging, documentation links, and affected Compose paths. The kind
+path requires an explicitly confirmed existing context; no cluster creation or
+persistent-data deletion is authorized by this correction. Record unavailable
+gates rather than inheriting historical runtime evidence as a fresh pass.
+
+### Original chapter increment
+
 Alex can retrieve a synthetic booking-request fixture from a minimal API backed
 by PostgreSQL. This is a reproducible technical baseline, not a reservation:
 it does not establish eligibility, quote a price, allocate inventory, authorize

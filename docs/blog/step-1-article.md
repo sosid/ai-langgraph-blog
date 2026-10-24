@@ -15,15 +15,21 @@ Testcontainers integration tests, and PKI checks passed. Compose's internal
 service path is demonstrated. Host-published Compose access and the Kubernetes
 HAProxy/cert-manager path are **blocked in this environment**, not verified.
 The [claim-to-evidence record](../verification/step-1-verification.md) separates
-these observations. This chapter is not yet an accepted runtime milestone.
+these observations. The Maven-layout correction reruns build/test/PKI and image
+packaging checks, not deployments: no existing Compose lab or confirmed kind
+context is available. Internal Compose observations below belong to the original
+candidate. This chapter is not yet an accepted runtime milestone.
 
 ## Starting point and learning outcomes
 
 Start at accepted `development` snapshot
-`5e0c173a11d57b64d0864379e03824c282eb4543`. The candidate is the local
-`features/step-1` worktree, with scope approved in the
-[blueprint](../plans/step-1-plan.md). No `step-01` tag or published branch is
-implied.
+`5e0c173a11d57b64d0864379e03824c282eb4543` for the original chapter. The
+Maven-layout correction starts from integrated `development` at
+`93c882b27a44779bbf17bbf9fb4057ce09149a5f` on
+`fix/maven-service-modules`; its exact runtime fingerprint and limitations are
+in the [verification record](../verification/step-1-verification.md).
+The [blueprint](../plans/step-1-plan.md) records the approved correction.
+No `step-01` release tag is implied.
 
 You will learn why a fixture is not a reservation, how an injected clock makes
 fixture initialization reproducible, why a failed database must not produce a
@@ -80,10 +86,10 @@ reservation or any consequential decision. There is still no durable graph
 progress, model context, decision ledger, payment operation, or distributed
 transaction.
 
-Read [`BookingRequest`](../../src/main/java/com/milesofsmiles/booking/BookingRequest.java)
+Read [`BookingRequest`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/BookingRequest.java)
 first: its three fields tell you the complete business scope. Then follow
-[`FixtureInitializer`](../../src/main/java/com/milesofsmiles/booking/FixtureInitializer.java)
-to [`BookingRepository`](../../src/main/java/com/milesofsmiles/booking/BookingRepository.java).
+[`FixtureInitializer`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/FixtureInitializer.java)
+to [`BookingRepository`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/BookingRepository.java).
 Initialization creates the fixture table and inserts the known identifier in
 one JDBC transaction. `ON CONFLICT (id) DO NOTHING` preserves an existing record.
 It is not a migration framework or a concurrent multi-replica initialization
@@ -91,14 +97,14 @@ guarantee; service-owned schemas and migrations belong to Step 2.
 
 Time is an input rather than an invisible dependency. The initializer receives
 a `Clock`; the baseline configuration fixes it at `2026-01-02T10:00:00Z`.
-[`ClockProducer`](../../src/main/java/com/milesofsmiles/booking/ClockProducer.java)
+[`ClockProducer`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/ClockProducer.java)
 can use the system UTC clock when the optional fixed instant is absent.
 Changing the clock does not rewrite a previously stored creation time.
 
-[`BookingResource`](../../src/main/java/com/milesofsmiles/booking/BookingResource.java)
+[`BookingResource`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/BookingResource.java)
 rejects malformed UUIDs before querying storage. A canonical but missing UUID
 is a 404. A failed database is not "missing": the
-[`exception mapper`](../../src/main/java/com/milesofsmiles/booking/BookingStorageExceptionMapper.java)
+[`exception mapper`](../../source/booking-service/src/main/java/com/milesofsmiles/booking/BookingStorageExceptionMapper.java)
 returns 503 with a stable code and logs the SQL state, without returning the
 provider's exception details to the caller.
 
@@ -114,13 +120,27 @@ scripts/check-pki.sh
 
 The build refuses Java 27. That is intentional: installing a newer JDK does not
 silently approve the series' conditional future migration. The
-[`pom.xml`](../../pom.xml) imports the exact Quarkus BOM, and the wrapper pins
-both Maven's version and distribution checksum.
+[`pom.xml`](../../pom.xml) imports the exact Quarkus BOM, pins shared plugin
+configuration, and aggregates the
+[`booking-service` module](../../source/booking-service/pom.xml). The root has
+`pom` packaging; only the module declares application dependencies and activates
+the Quarkus and test plugins. Future code projects follow `source/<service-name>/`
+and register in the root module list, not in this chapter's implementation.
+The wrapper pins both Maven's version and distribution checksum.
 
-[`BookingBaselineTest`](../../src/test/java/com/milesofsmiles/booking/BookingBaselineTest.java)
+Root commands build the whole reactor. Use
+`./mvnw -pl source/booking-service -am verify` to select booking and its reactor
+prerequisites. Sources and tests live under `source/booking-service/src/`;
+reports, ephemeral test certificates, and the runnable `target/quarkus-app/`
+live under `source/booking-service/target/`. The integration-test bootstrap
+resolves the root PKI script explicitly rather than relying on Maven's working
+directory. The Dockerfile copies only booking's module output while keeping
+the repository root as its build context.
+
+[`BookingBaselineTest`](../../source/booking-service/src/test/java/com/milesofsmiles/booking/BookingBaselineTest.java)
 uses Mockito for clock handoff, storage mapping, invalid/missing identifiers,
 transaction commit/rollback, and explicit dependency failures.
-[`BookingApiIT`](../../src/test/java/com/milesofsmiles/booking/BookingApiIT.java)
+[`BookingApiIT`](../../source/booking-service/src/test/java/com/milesofsmiles/booking/BookingApiIT.java)
 starts PostgreSQL through Testcontainers, bootstraps ephemeral test certificates,
 and exercises the API against the real database. The tests do not require kind.
 

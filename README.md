@@ -10,6 +10,9 @@ pass. Compose runs internally, but published-port access and the kind
 controller/ingress walkthrough are blocked in the current environment. See the
 [verification record](docs/verification/step-1-verification.md) before treating
 any deployment promise as verified.
+The current Maven-layout correction rechecks the build, tests, PKI, and image
+packaging; the internal Compose observations are historical, not a fresh
+deployment pass.
 
 ## Build from the repository root
 
@@ -29,7 +32,37 @@ Maven 3.9.11 is downloaded by the checksum-pinned wrapper. The first build needs
 network access to Maven Central and the pinned container registry images.
 `verify` runs seven mock-based unit tests and five PostgreSQL integration tests,
 including a database outage, recovery, verified JDBC TLS, and HTTPS trust
-rejection. Test private material stays under ignored `target/`.
+rejection. Test reports, packaged application, and ephemeral test certificates
+stay under ignored `source/booking-service/target/`; the standalone PKI check
+uses root `target/`.
+
+## Maven service layout
+
+The root [`pom.xml`](pom.xml) is the parent and reactor aggregator. It pins the
+Java baseline, Quarkus BOM, and shared plugin configuration without packaging an
+application. Each code project is a Maven module under `source/<service-name>/`.
+Only [`source/booking-service`](source/booking-service/pom.xml) exists today;
+future services are added only in their authorized chapters.
+
+```text
+pom.xml                         parent and module list
+source/booking-service/pom.xml   booking dependencies and application plugins
+source/booking-service/src/      Java sources, configuration, and tests
+source/booking-service/target/   module-local generated output (ignored)
+deploy/step-1/                   chapter deployment resources
+scripts/                        repository-level lab tooling
+```
+
+The root compile/verify commands build every registered module. To work only on
+booking, run these from the repository root:
+
+```bash
+./mvnw -pl source/booking-service -am verify
+```
+
+Docker builds still use the repository root as context and copy the booking
+module's `target/quarkus-app/`. Java and test Javadocs describe the current
+fixture, failure, and TLS boundaries; they do not promise future capabilities.
 
 The observed lab is Linux amd64 with Temurin 25.0.5+8, Docker 29.1.3 and 8 GiB
 memory. This is the tested environment, not a measured minimum or performance

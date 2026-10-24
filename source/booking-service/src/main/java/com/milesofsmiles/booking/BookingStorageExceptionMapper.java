@@ -5,6 +5,7 @@ import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 import org.jboss.logging.Logger;
 
+/** Maps storage failures to HTTP 503 and logs SQL state without returning provider details. */
 @Provider
 public class BookingStorageExceptionMapper implements ExceptionMapper<BookingStorageException> {
     private static final Logger LOG = Logger.getLogger(BookingStorageExceptionMapper.class);

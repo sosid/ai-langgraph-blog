@@ -8,6 +8,9 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.sql.DataSource;
 
+/**
+ * Stores the synthetic request fixture in PostgreSQL, not a confirmed reservation.
+ */
 @ApplicationScoped
 public class BookingRepository {
     private final DataSource dataSource;
@@ -17,6 +20,13 @@ public class BookingRepository {
         this.dataSource = dataSource;
     }
 
+    /**
+     * Creates the fixture table and inserts the known request in one transaction.
+     * An existing fixture is never overwritten; this is not a migration mechanism.
+     *
+     * @param createdAt creation time used only when inserting the fixture
+     * @throws BookingStorageException if initialization cannot commit
+     */
     public void initialize(Instant createdAt) {
         try (var connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -53,6 +63,13 @@ public class BookingRepository {
         }
     }
 
+    /**
+     * Reads a stored request using a bound UUID parameter.
+     *
+     * @param id request identifier
+     * @return the stored request, or empty only when no matching row exists
+     * @throws BookingStorageException if storage is unavailable
+     */
     public Optional<BookingRequest> find(UUID id) {
         try (var connection = dataSource.getConnection();
                 var statement = connection.prepareStatement("""
