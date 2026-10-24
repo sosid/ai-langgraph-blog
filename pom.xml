@@ -9,6 +9,8 @@
     <packaging>pom</packaging>
     <modules>
         <module>source/booking-service</module>
+        <module>source/rental-service</module>
+        <module>source/fleet-service</module>
     </modules>
     <properties>
         <maven.compiler.release>25</maven.compiler.release>

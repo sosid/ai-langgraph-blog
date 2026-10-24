@@ -22,10 +22,10 @@ policies, dependencies, schemas, or base invalidates relevant evidence.
 
 | Field | Value |
 | --- | --- |
-| Step | 1 - Reproducible booking baseline |
-| Base revision | `93c882b27a44779bbf17bbf9fb4057ce09149a5f` (integrated Step 1; original chapter starts at accepted Step 0 `5e0c173a11d57b64d0864379e03824c282eb4543`) |
-| Candidate | Maven-layout correction on `fix/maven-service-modules`; current source fingerprint and evidence in `docs/verification/step-1-verification.md` |
-| Type | Corrective refactor, not a new chapter; deployment acceptance remains blocked |
+| Step | 2 - Service-owned records |
+| Base revision | `daed623a6c32383b96b402fe4bf27f22778b060a` (accepted Step 1 plus Maven-module correction) |
+| Candidate | Current `features/step-2` review candidate; runtime fingerprint in `docs/verification/step-2-verification.md`; exact final commit/tree in the review handoff |
+| Type | Approved chapter implementation; normal networking deployment gates remain blocked |
 
 ## Step 0 promises (delivered in this chapter)
 
@@ -51,7 +51,7 @@ them.
 | ID | Promise | Owning boundary | Introducing step | Status |
 | --- | --- | --- | --- | --- |
 | P-BOOK-BASELINE | Reproducible booking baseline: clean compile/verify, both deployment paths, restart/persistence | Booking | 1 | blocked (build/tests pass; host-published Compose and kind end-to-end gates unavailable) |
-| P-RECORDS | Service-owned records with isolated roles, versioned contracts, request hashes, interval constraints | Booking / Fleet / Rental | 2 | planned |
+| P-RECORDS | Service-owned records with isolated roles, versioned contracts, request hashes, interval constraints | Booking / Fleet / Rental | 2 | verified at revision for source/test and node-local fallback scope; normal deployment coverage separately blocked below |
 | P-RULES | Deterministic eligibility/pricing replay same evidence+rule version to same outcome; model cannot weaken a rule | Booking / Policy and evidence | 3 | planned |
 | P-AUDIT-CORRELATION | OpenTelemetry correlation with durable decision evidence; audit survives sampling/export loss | Audit evidence | 3 (extended through 27) | planned |
 | P-HOLDS | Atomic holds, expiry, quote validity, idempotency, compensation, outcome queries | Fleet / Booking | 4 | planned |
@@ -79,6 +79,10 @@ named frozen candidate provides the corresponding evidence.
 
 ## Step 1 promise breakdown
 
+These historical observations describe the accepted predecessor and its named
+fingerprints, not current implementation details. Step 2 reverifies the legacy
+API/clock/failure/trust behavior while replacing runtime schema creation.
+
 Step 0 remains accepted by the user. No Step 0 runtime promise is retroactively
 verified by this increment. The fixture is a synthetic request, not a confirmed
 reservation. The Step 1 source fingerprint, observed toolchain, commands, and
@@ -95,3 +99,25 @@ limitations are recorded in
 | P1-COMPOSE | Documented host endpoint and restart/persistence walkthrough | Local operator | `deploy/step-1/compose.yaml`, smoke/persistence scripts | blocked (correction config/image build pass; runtime unrun without authorization to create persistent lab state; earlier internal observations are historical) |
 | P1-KIND | Existing/dedicated authorized kind path with HAProxy, cert-manager Issuer, nip.io/sslip.io routes, retained local volume | Local operator | `deploy/step-1/kind/`, kind scripts | blocked (newly authorized correction cluster Ready and booking image imported; networking preflight and kube-proxy fail on missing kernel comment match before chapter deployment) |
 | P1-ROTATION | Renew deployed server certificates and prove workloads use them after restart | Local operator | Compose renewal walkthrough; kind Certificate resources | blocked overall (correction isolated PKI check passes; deployed renewal unrun; earlier internal Compose observation is historical) |
+
+## Step 2 promise breakdown
+
+All references below are tied to the runtime fingerprint and command evidence
+in [the Step 2 verification record](verification/step-2-verification.md).
+The Step 2 article sections are the claim inventory; the contract document
+defines versioned JSON, canonical hash input, bounds and error outcomes.
+No model, graph, audit or Step 3 behavior is delivered.
+
+| ID | Promise / owning boundary | Article section | Source / evidence | Status |
+| --- | --- | --- | --- | --- |
+| P2-OWNERS | Only owner-scoped record DML; runtime cannot DDL, assume migrator or read history / each service | Three owners; Migration authority | `deploy/step-2/bootstrap.sql`, grants in owner migrations; `BookingRecordsIT`; deployed `step-2-isolation.sh` across all six ordered pairs | verified at revision (actual runtime credentials in tests, Compose and kind fallback) |
+| P2-MIGRATIONS | Clean installation, exact Step 1 upgrade preserving altered fixture, no-op repeat, drift/mismatch rejection / owning migrator | Migration authority | `BookingBootstrapIT`, `BookingUpgradeIT`, owner migration/schema guard tests | verified at revision (Testcontainers; no live upgrade of user-owned Step 1 data claimed) |
+| P2-CONTRACTS | Bounded, strict, versioned requests and reads; stable safe outcomes / HTTP owners | A retry; Run the candidate | `docs/contracts/step-2-http.md`; owner unit/API tests; deployed smoke | verified at revision (synthetic unauthenticated local scope) |
+| P2-HASHES | Canonical typed hashes; same-key replay, changed-payload conflict, concurrent exactly-one row / Booking and Rental | A retry | `BookingSubmission`, `BookingRecordRepository`, `RentalRequest`, `RentalRepository`; mock/PostgreSQL concurrent tests and deployed replay checks | verified at revision (single database transaction per owner, no distributed effect guarantee) |
+| P2-INTERVALS | Half-open adjacency and blocking overlap integrity / Fleet | Adjacent is not overlapping | `V1__fleet_records.sql`, `AllocationInterval`, `FleetRepository`; mock and Testcontainers boundary/concurrency/status/rollback tests | verified at revision (repository storage contract; public hold lifecycle deferred to Step 4) |
+| P2-LEGACY | Existing fixture/API/clock/trust/outage behavior preserved / Booking | Migration authority; Failure lab | Original `BookingBaselineTest`, `BookingApiIT`; upgrade tests; deployed fixture smoke | verified at revision (startup DDL intentionally replaced by owner migrations) |
+| P2-COMPOSE-INTERNAL | Trusted internal endpoints, distinct roles, record/marker persistence / Local operator | Run the candidate; Failure lab | Internal `step-2-smoke.sh`, `step-2-isolation.sh compose`, `step-2-persistence.sh compose` | verified at revision (internal network only) |
+| P2-COMPOSE-HOST | Normal host-published Compose walkthrough / Local operator | What the lab demonstrates | `curl`/normal smoke against loopback 8543 | blocked (published transport times out despite healthy services) |
+| P2-KIND-HOST | Explicitly approved single-node loopback hostNetwork+port-forward fallback / Local operator | What the lab demonstrates; Failure lab | Fingerprinted image reapply, retained old migration Jobs, trusted endpoint/role checks, and separate app/database replacement with retained marker/records | verified at revision (not CNI/ClusterIP/ingress/cross-node evidence) |
+| P2-KIND-POD | Normal direct pod-to-database connectivity / Local operator | What the lab demonstrates | Ready database; normal migration Jobs fail with connection timeouts; kube-proxy comment-match failure | blocked (missing host kernel support; failed Jobs retained) |
+| P2-FUTURE | Rules, audit correlation, public hold lifecycle, graph/model authority | Closing handoff | Roadmap Steps 3 onward | deferred (not implemented in this chapter) |

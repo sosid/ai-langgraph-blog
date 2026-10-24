@@ -1,0 +1,120 @@
+name: mos-step-2
+x-runtime: &runtime
+  user: "10001:${LOCAL_GID:-0}"
+  read_only: true
+  tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+  mem_limit: 384m
+  cpus: 1
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  volumes:
+    - ../../.local/step-2/app:/tls:ro
+  healthcheck:
+    test: ["CMD", "java", "-cp", "/opt/health", "com.milesofsmiles.booking.HealthProbe", "https://localhost:8443/q/health/ready", "/tls/ca.crt"]
+    interval: 5s
+    timeout: 8s
+    retries: 24
+x-environment: &environment
+  QUARKUS_PROFILE: tls
+  DB_URL: jdbc:postgresql://postgres:5432/records?sslmode=verify-full&sslrootcert=/tls/ca.crt
+  TLS_DIR: /tls
+services:
+  postgres:
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+    user: "70:${LOCAL_GID:-0}"
+    environment:
+      POSTGRES_DB: records
+      POSTGRES_USER: bootstrap
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    entrypoint: ["/bin/sh", "-ec", 'install -m 0600 /tls/server.key /tmp/server.key; exec /usr/local/bin/docker-entrypoint.sh "$@"', "postgres-entrypoint"]
+    command: ["postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/tls/server.crt", "-c", "ssl_key_file=/tmp/server.key", "-c", "hba_file=/etc/postgresql/pg_hba.conf"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../../.local/step-2/postgres:/tls:ro
+      - ../step-1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./bootstrap.sh:/docker-entrypoint-initdb.d/01-bootstrap.sh:ro
+      - ./bootstrap.sql:/bootstrap/bootstrap.sql:ro
+    secrets: [db-password, booking_app-password, booking_migrator-password, rental_app-password, rental_migrator-password, fleet_app-password, fleet_migrator-password]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bootstrap -d records"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    mem_limit: 512m
+    cpus: 1
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  booking-migrate:
+    <<: *runtime
+    image: miles-of-smiles/booking:step-2
+    environment:
+      <<: *environment
+      DB_USERNAME: booking_migrator
+      DB_PASSWORD_FILE: /run/secrets/booking_migrator-password
+      MIGRATION_MAIN: com.milesofsmiles.booking.BookingMigrationMain
+    secrets: [booking_migrator-password]
+    healthcheck: {disable: true}
+    depends_on: {postgres: {condition: service_healthy}}
+  rental-migrate:
+    <<: *runtime
+    image: miles-of-smiles/rental:step-2
+    environment:
+      <<: *environment
+      DB_USERNAME: rental_migrator
+      DB_PASSWORD_FILE: /run/secrets/rental_migrator-password
+      MIGRATION_MAIN: com.milesofsmiles.rental.RentalMigrationMain
+    secrets: [rental_migrator-password]
+    healthcheck: {disable: true}
+    depends_on: {postgres: {condition: service_healthy}}
+  fleet-migrate:
+    <<: *runtime
+    image: miles-of-smiles/fleet:step-2
+    environment:
+      <<: *environment
+      DB_USERNAME: fleet_migrator
+      DB_PASSWORD_FILE: /run/secrets/fleet_migrator-password
+      MIGRATION_MAIN: com.milesofsmiles.fleet.FleetMigrationMain
+    secrets: [fleet_migrator-password]
+    healthcheck: {disable: true}
+    depends_on: {postgres: {condition: service_healthy}}
+  booking:
+    <<: *runtime
+    image: miles-of-smiles/booking:step-2
+    environment:
+      <<: *environment
+      DB_USERNAME: booking_app
+      DB_PASSWORD_FILE: /run/secrets/booking_app-password
+    secrets: [booking_app-password]
+    ports: ["127.0.0.1:8543:8443"]
+    depends_on: {booking-migrate: {condition: service_completed_successfully}}
+  rental:
+    <<: *runtime
+    image: miles-of-smiles/rental:step-2
+    environment:
+      <<: *environment
+      DB_USERNAME: rental_app
+      DB_PASSWORD_FILE: /run/secrets/rental_app-password
+    secrets: [rental_app-password]
+    ports: ["127.0.0.1:8544:8443"]
+    depends_on: {rental-migrate: {condition: service_completed_successfully}}
+  fleet:
+    <<: *runtime
+    image: miles-of-smiles/fleet:step-2
+    environment:
+      <<: *environment
+      DB_USERNAME: fleet_app
+      DB_PASSWORD_FILE: /run/secrets/fleet_app-password
+    secrets: [fleet_app-password]
+    ports: ["127.0.0.1:8545:8443"]
+    depends_on: {fleet-migrate: {condition: service_completed_successfully}}
+secrets:
+  db-password: {file: ../../.local/step-2/db-password}
+  booking_app-password: {file: ../../.local/step-2/booking_app-password}
+  booking_migrator-password: {file: ../../.local/step-2/booking_migrator-password}
+  rental_app-password: {file: ../../.local/step-2/rental_app-password}
+  rental_migrator-password: {file: ../../.local/step-2/rental_migrator-password}
+  fleet_app-password: {file: ../../.local/step-2/fleet_app-password}
+  fleet_migrator-password: {file: ../../.local/step-2/fleet_migrator-password}
+volumes:
+  postgres-data:

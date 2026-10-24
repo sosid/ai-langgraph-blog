@@ -1,5 +1,13 @@
 # Step 1 - A Booking Request You Can Reproduce
 
+**Historical edition:** Reproduce this chapter at accepted predecessor
+`daed623a6c32383b96b402fe4bf27f22778b060a`. The user accepted Step 1 before
+authorizing [Step 2](step-2-article.md); the blocked observations below remain
+historical gaps, not retroactive passes. Source paths describe that snapshot.
+In Step 2, migrations replace runtime table creation and add other owners.
+Use its deployment resources with current binaries, not the unmigrated Step 1
+walkthrough.
+
 Alex still does not have a reservation. [Step 0](step-0-article.md) established
 who may decide eligibility, inventory, money, and safety, but offered nothing
 executable. This chapter makes a smaller promise: an operator can retrieve a
