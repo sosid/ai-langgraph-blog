@@ -24,7 +24,7 @@ policies, dependencies, schemas, or base invalidates relevant evidence.
 | --- | --- |
 | Step | 2 - Service-owned records |
 | Base revision | `daed623a6c32383b96b402fe4bf27f22778b060a` (accepted Step 1 plus Maven-module correction) |
-| Candidate | Local `features/step-2`; runtime fingerprint and evidence in `docs/verification/step-2-verification.md`; final full-tree identifier supplied in handoff |
+| Candidate | Current `features/step-2` review candidate; runtime fingerprint in `docs/verification/step-2-verification.md`; exact final commit/tree in the review handoff |
 | Type | Approved chapter implementation; normal networking deployment gates remain blocked |
 
 ## Step 0 promises (delivered in this chapter)
@@ -118,6 +118,6 @@ No model, graph, audit or Step 3 behavior is delivered.
 | P2-LEGACY | Existing fixture/API/clock/trust/outage behavior preserved / Booking | Migration authority; Failure lab | Original `BookingBaselineTest`, `BookingApiIT`; upgrade tests; deployed fixture smoke | verified at revision (startup DDL intentionally replaced by owner migrations) |
 | P2-COMPOSE-INTERNAL | Trusted internal endpoints, distinct roles, record/marker persistence / Local operator | Run the candidate; Failure lab | Internal `step-2-smoke.sh`, `step-2-isolation.sh compose`, `step-2-persistence.sh compose` | verified at revision (internal network only) |
 | P2-COMPOSE-HOST | Normal host-published Compose walkthrough / Local operator | What the lab demonstrates | `curl`/normal smoke against loopback 8543 | blocked (published transport times out despite healthy services) |
-| P2-KIND-HOST | Explicitly approved single-node loopback hostNetwork+port-forward fallback / Local operator | What the lab demonstrates; Failure lab | Chapter renderer/apply script, trusted endpoint/role checks and separate app/database replacement with retained marker/records | verified at revision (not CNI/ClusterIP/ingress/cross-node evidence) |
+| P2-KIND-HOST | Explicitly approved single-node loopback hostNetwork+port-forward fallback / Local operator | What the lab demonstrates; Failure lab | Fingerprinted image reapply, retained old migration Jobs, trusted endpoint/role checks, and separate app/database replacement with retained marker/records | verified at revision (not CNI/ClusterIP/ingress/cross-node evidence) |
 | P2-KIND-POD | Normal direct pod-to-database connectivity / Local operator | What the lab demonstrates | Ready database; normal migration Jobs fail with connection timeouts; kube-proxy comment-match failure | blocked (missing host kernel support; failed Jobs retained) |
 | P2-FUTURE | Rules, audit correlation, public hold lifecycle, graph/model authority | Closing handoff | Roadmap Steps 3 onward | deferred (not implemented in this chapter) |

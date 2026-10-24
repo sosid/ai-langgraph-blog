@@ -122,9 +122,10 @@ CONFIRM_KIND_CONTEXT=kind-mos-step-2 scripts/step-2-kind-apply.sh
 The normal script uses direct database pod addressing through `hostAliases`
 while retaining the `postgres` certificate hostname and JDBC `verify-full`.
 This avoids requiring ClusterIP/DNS routing but still requires working
-pod-to-pod networking. After a database pod IP changes, update application
-`hostAliases` before restarting them. Completed migration Jobs have immutable
-templates; do not delete them or persistent data merely to retry a failed lab.
+pod-to-pod networking. Reapply after a database pod replacement: the renderer
+updates application `hostAliases` and uses the new endpoint in migration Job
+names. Completed Jobs are immutable and retained; do not delete them or
+persistent data merely to retry a failed lab.
 
 PostgreSQL stores data in the dedicated node's
 `/var/local/mos-step-2/postgres`, mounted with `hostPath`. The script creates
@@ -162,8 +163,15 @@ CONFIRM_KIND_CONTEXT=kind-mos-step-2 scripts/step-2-isolation.sh kind
 
 The renderer applies plain manifests through direct `kubectl`, changes network
 settings and probe ports explicitly, and gives migration Jobs separate `-host`
-names. Failed normal Jobs remain as failure evidence. Services use `Recreate`
-because two replicas cannot bind the same node port. There is no HA claim.
+names. After importing locally built images, it fingerprints their image IDs in
+service pod templates and migration Job names. Migration Job names also include
+the database image and current database pod address, so a database replacement
+does not try to mutate an old immutable Job. Reapplying after a rebuild thus
+rolls changed services and runs a new migration Job even though the lab tag stays
+`:step-2`; previous Jobs remain as evidence. An unchanged image revision does
+not cause an unnecessary rollout. Failed normal Jobs remain as failure evidence.
+Services use `Recreate` because two replicas cannot bind the same node port.
+There is no HA claim.
 
 In three separate terminals, keep these commands in the foreground:
 

@@ -226,7 +226,9 @@ credentials. It includes the original fixture, outage and trust checks.
 The [deployment guide](../../deploy/step-2/README.md) contains build/private-input
 preparation, Compose, kind fallback, foreground port-forwards, isolation and
 restart exercises. Do not use Step 1 manifests to start the newly migrated
-applications.
+applications. On kind, applying rebuilt images fingerprints their content into
+the service pod templates and migration Job names, so the fixed `:step-2` tags
+cannot leave an older process serving requests after an image reload.
 
 With the kind fallback forwarded as documented:
 

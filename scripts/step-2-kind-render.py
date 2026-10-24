@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Render the approved node-local fallback without changing TLS identity checks."""
 import json
+import re
 import sys
 
-mode, database_ip = sys.argv[1:]
+mode, database_ip, image_revision, migration_revision = sys.argv[1:]
 if mode not in ("pod", "host"):
     raise SystemExit("Network mode must be pod or host")
+if not re.fullmatch(r"[0-9a-f]{32}", image_revision):
+    raise SystemExit("Image revision must be a 32-character lowercase hex digest")
+if not re.fullmatch(r"[0-9a-f]{32}", migration_revision):
+    raise SystemExit("Migration revision must be a 32-character lowercase hex digest")
 remaining = sys.stdin.read().lstrip()
 decoder = json.JSONDecoder()
 items = []
@@ -19,17 +24,24 @@ document = {"apiVersion": "v1", "kind": "List", "items": items}
 for item in items:
     if item["kind"] not in ("Deployment", "Job"):
         continue
-    pod = item["spec"]["template"]["spec"]
+    template = item["spec"]["template"]
+    template.setdefault("metadata", {}).setdefault("annotations", {})[
+        "miles-of-smiles.io/image-revision"
+    ] = image_revision
+    pod = template["spec"]
+    if mode == "host":
+        pod["hostNetwork"] = True
+        pod["dnsPolicy"] = "Default"
+        if item["kind"] == "Deployment":
+            item["spec"]["strategy"] = {"type": "Recreate"}
+        else:
+            item["metadata"]["name"] += "-host"
+    if item["kind"] == "Job":
+        item["metadata"]["name"] += f"-{migration_revision}"
     if mode == "pod":
         if item["metadata"]["name"] != "postgres":
             pod["hostAliases"] = [{"ip": database_ip, "hostnames": ["postgres"]}]
         continue
-    pod["hostNetwork"] = True
-    pod["dnsPolicy"] = "Default"
-    if item["kind"] == "Deployment":
-        item["spec"]["strategy"] = {"type": "Recreate"}
-    else:
-        item["metadata"]["name"] += "-host"
     container = pod["containers"][0]
     if item["metadata"]["name"] == "postgres":
         container["args"][0] += " -c listen_addresses=127.0.0.1"

@@ -18,33 +18,40 @@ privileges, strict booking JSON types, booking schema guard ordering, qualified
 digest imports, and local rendering of Kubernetes JSON streams. The HTTP
 walkthrough also demonstrated that JAX-RS resolves `Location` to an absolute
 URL; the contract now describes the observed response rather than promising a
-relative header. There are no claimed independent-review or vulnerability-audit
-passes.
+relative header. Independent code review also found that re-importing rebuilt
+`:step-2` images did not restart existing Deployments or rerun completed
+migration Jobs, and that a changed database pod IP could leave a pod-mode Job
+template immutable under its old name. The kind apply path now fingerprints
+image IDs in pod templates and the service/database image IDs plus database pod
+address in migration Job names; focused deployment evidence is recorded below.
+No independent security audit is claimed.
 
-## Frozen candidate
+## Original PR candidate (historical)
 
 | Field | Identifier |
 | --- | --- |
 | Step / branch | Approved Step 2, local `features/step-2` |
 | Accepted base | `daed623a6c32383b96b402fe4bf27f22778b060a` |
-| Runtime/test/config SHA-256 | `dca61ba2de2c9bb5b5563bd89aa3bd6423ba5f142094e08ba5eafdbab63837aa` |
-| Runtime manifest | 101 files; source/tests, deployment and scripts excluding Markdown, root POM/wrapper/configuration |
-| Full source/documentation tree | Calculated with an isolated Git index after writing this record; exact tree ID supplied in the task handoff and external session manifest |
-| Working tree | Initially modified/untracked chapter files; subsequently authorized for commit/push and draft PR; no target-history rewrite, merge or tag |
+| Original PR head | `082ea6bb51886ab0af6bcfd31458afa730ebf40a` |
+| Original runtime/test/config SHA-256 | `dca61ba2de2c9bb5b5563bd89aa3bd6423ba5f142094e08ba5eafdbab63837aa` |
+| Original runtime manifest | 101 files; source/tests, deployment and scripts excluding Markdown, root POM/wrapper/configuration |
+| Original full tree | `636e5de81c6d94600b7438c2b6ed4e0cf6ec62aa` |
+| Working tree at review start | Clean at the original PR head; current review changes are described below |
 
 The runtime manifest is sorted by path. Each row contains `path`, executable
 mode (`100644` or `100755`) and the file's SHA-256. The fingerprint is SHA-256
 of the UTF-8 JSON row array with sorted keys and compact separators. The
-non-committed manifest/logs are under `.local/step-2` and `.local/toolchains`.
-Build output, downloaded tools, generated credentials/certificates and live
-database data are not source candidates and remain ignored.
+fingerprint above applies only to the original PR head. The review correction
+changes tracked deployment scripts, so that fingerprint does not identify the
+updated candidate. Build output, downloaded tools, generated
+credentials/certificates and live database data remain ignored.
 
 The final full Git tree includes this record and all chapter documentation.
 It cannot be embedded in its own contents without changing its identity.
 Computing that tree with a temporary index does not stage the user's index or
 create a commit. The full changed-file inventory appears below.
 
-### PR preparation and documentation-only revision
+### Original PR preparation (historical)
 
 The user subsequently authorized a PR to `development` and requested an
 explanation if its already integrated predecessor could not be safely amended.
@@ -54,7 +61,7 @@ The new article and deployment-guide sections explain the Maven correction's
 purpose, its actual failed kind attempt, and why the later hostNetwork
 observation does not erase those earlier gaps.
 
-This preparation changes documentation only relative to the previously
+That preparation changed documentation only relative to the previously
 verified full tree `bb53c7ea8f7ed1fad091061c572eb33ab6d8e6dc`.
 All 101 runtime/test/config input hashes and executable modes are rechecked
 against the manifest above. Consequently the recorded 39 unit and 34
@@ -62,9 +69,48 @@ integration passes remain applicable to unchanged inputs; they are not claimed
 as a new runtime run. The revised narrative is checked against the actual
 published commit, predecessor blueprint and Step 1 evidence, with local
 links/anchors, credential-pattern scanning and whitespace checks repeated.
-The PR head commit/tree identifies this revised documentation snapshot without
-embedding a self-referential SHA here. No PR template exists in this candidate.
-The draft remains explicitly non-accepting of blocked normal deployment gates.
+The original PR head/tree identifies that revised documentation snapshot. This
+historical check does not cover the runtime script changes in the review
+correction below. No PR template exists. The draft remains explicitly
+non-accepting of blocked normal deployment gates.
+
+## Review correction candidate
+
+The current review candidate is based on the accepted base above and adds
+image-revision handling to `scripts/step-2-kind-apply.sh` and
+`scripts/step-2-kind-render.py`. The final commit and tree identifiers are in
+the PR head and review handoff; the old runtime fingerprint is not reused for
+these changes.
+
+| Field | Value |
+| --- | --- |
+| Runtime/config fingerprint | `21fa32f5674002544f4be8c731cef44a330d76117537bfe9e0c52825794d71c5` |
+| Manifest | 101 tracked non-Markdown files; sorted path, Git mode, and file SHA-256 rows encoded as compact sorted-key JSON before SHA-256 |
+
+The renderer places a 32-character digest of the sorted local service image
+IDs in each service Deployment pod template. The migration Job name also
+includes a digest derived from those service IDs, the PostgreSQL image ID, and
+the current PostgreSQL pod address. This causes changed images to produce a new
+Deployment template and migration Jobs, and changed pod addresses to avoid
+reapplying an immutable old Job. Existing Jobs and persistent database state
+are retained.
+
+| Check | Result |
+| --- | --- |
+| Temurin 25.0.4.1 `./mvnw clean compile` and `./mvnw verify` | Passed; 39 mock-based unit and 34 PostgreSQL Testcontainers integration tests, zero failures/errors/skips. Java sources and dependencies are unchanged by this review fix. |
+| `bash -n scripts/step-2-kind-apply.sh`; renderer AST and pod/host render checks | Passed; pod-mode Job names vary with database pod address, host-mode names include `-host`, and both modes include revision annotations. |
+| `scripts/check-pki.sh` | Passed. |
+| Three pinned service Docker builds | Passed. |
+| Dedicated fresh `kind-mos-step-2`, host-network apply | Passed on kind 0.33.0 / Kubernetes 1.35.0 / Docker 28.0.4; trusted local port-forwards exercised health, fixture, booking/rental writes, replay/conflict, fleet read, invalid/missing IDs, and runtime role denials. |
+| Rebuild under the same `:step-2` tag with a review-only image label and reapply | Passed; changed Docker image ID changed the Deployment fingerprint, running pod image ID, and migration Job names. The original image was restored and re-applied; prior Jobs were preserved. |
+| Same-image reapply | Passed; Deployment fingerprints and migration Job count remained unchanged. |
+| `scripts/step-2-persistence.sh kind` | Passed after separate booking, rental, fleet, and PostgreSQL restarts; marker and record IDs/hashes remained stable. Final trusted smoke passed after reopening the forwards. |
+| Unrelated system CA against forwarded HTTPS | Rejected as expected (curl exit 60). |
+
+This run verifies only the approved single-node host-network/port-forward
+fallback. It does not verify pod-network/CNI, ClusterIP/DNS, ingress,
+cross-node networking, or HA. Compose was not rerun for this kind-only script
+change. The original blocked network-gate evidence remains in force.
 
 ## Environment and prerequisites
 
@@ -216,11 +262,16 @@ and the final source/test candidate reran production bootstrap in Testcontainers
 
 ## Documentation, safety and limitations
 
-Final documentation checks passed: 21 Markdown files, 90 local links/anchors,
-122 candidate files scanned for credential patterns, exact 77-file changed-path
-inventory, unchanged runtime fingerprint, renderer syntax, shell syntax,
-Compose configuration and Git whitespace checks. Source-backed editorial
-consistency was reviewed manually. External
+At the original PR head, documentation checks covered 21 Markdown files, 90
+local links/anchors, 122 candidate files scanned for credential patterns, its
+77-file changed-path inventory, its unchanged runtime fingerprint, renderer
+syntax, shell syntax, Compose configuration and Git whitespace. These are
+historical results, not checks against the current review candidate.
+
+For the current review candidate, the local Markdown link/anchor check passed
+for 21 files and 93 links. Its 101-file non-Markdown runtime/config fingerprint
+is recorded above; this fingerprint differs from the original PR candidate.
+Source-backed editorial consistency was reviewed manually. External
 release-specific Quarkus/Flyway and PostgreSQL source references were retrieved.
 The PostgreSQL HTML documentation host could not resolve in this environment,
 so the article links the accessible exact `REL_17_6` source documentation.
